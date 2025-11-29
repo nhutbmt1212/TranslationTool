@@ -1,0 +1,17 @@
+{
+    "extends": "./tsconfig.electron.json",
+    "compilerOptions": {
+        "module": "commonjs",
+        "outDir": "./dist-electron",
+        "rootDir": "./"
+    },
+    "include": [
+        "electron/preload.ts"
+    ],
+    "exclude": [
+        "node_modules",
+        "dist",
+        "dist-electron",
+        "src"
+    ]
+}

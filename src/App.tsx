@@ -405,6 +405,33 @@ Văn bản cần dịch:
     };
   }, []);
 
+  useEffect(() => {
+    const handlePaste = (event: ClipboardEvent) => {
+      const clipboardData = event.clipboardData;
+      if (!clipboardData) return;
+
+      // Check for files (Images)
+      if (clipboardData.files && clipboardData.files.length > 0) {
+        const file = clipboardData.files[0];
+        if (file.type.startsWith('image/')) {
+          console.log('Paste detected: Image', file);
+          return;
+        }
+      }
+
+      // Check for text
+      const text = clipboardData.getData('text');
+      if (text) {
+        console.log('Paste detected: Text', text);
+      }
+    };
+
+    window.addEventListener('paste', handlePaste);
+    return () => {
+      window.removeEventListener('paste', handlePaste);
+    };
+  }, []);
+
   const resolvedLanguage = i18n.resolvedLanguage || i18n.language || 'en';
   const currentUiLanguage = resolvedLanguage.split('-')[0];
   const sourceLabel =

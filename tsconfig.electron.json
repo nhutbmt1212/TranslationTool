@@ -2,7 +2,9 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "ES2022",
-    "lib": ["ES2022"],
+    "lib": [
+      "ES2022"
+    ],
     "outDir": "./dist-electron",
     "rootDir": "./",
     "strict": true,
@@ -16,10 +18,19 @@
     "sourceMap": true,
     "baseUrl": ".",
     "paths": {
-      "../src/*": ["./src/*"]
+      "../src/*": [
+        "./src/*"
+      ]
     }
   },
-  "include": ["electron/**/*"],
-  "exclude": ["node_modules", "dist", "dist-electron", "src"]
+  "include": [
+    "electron/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "dist-electron",
+    "src",
+    "electron/preload.ts"
+  ]
 }
-

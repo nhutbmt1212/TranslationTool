@@ -7,9 +7,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build && electron-builder",
-    "build:electron": "tsc -p tsconfig.translator.json && tsc -p tsconfig.electron.json && vite build",
+    "build:electron": "tsc -p tsconfig.translator.json && tsc -p tsconfig.electron.json && tsc -p tsconfig.preload.json && vite build",
     "preview": "vite preview",
-    "electron:dev": "concurrently \"npm run dev\" \"tsc -p tsconfig.translator.json --watch\" \"tsc -p tsconfig.electron.json --watch\" \"wait-on http://localhost:5173 && electron .\"",
+    "electron:dev": "concurrently \"npm run dev\" \"tsc -p tsconfig.translator.json --watch\" \"tsc -p tsconfig.electron.json --watch\" \"tsc -p tsconfig.preload.json --watch\" \"wait-on http://localhost:5173 && electron .\"",
     "electron:build": "npm run build:electron && electron-builder",
     "cli:build": "tsc -p tsconfig.cli.json",
     "cli:dev": "tsx src/cli/index.ts",
