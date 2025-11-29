@@ -61,7 +61,7 @@ const getInitialTheme = (): 'light' | 'dark' => {
   return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 };
 
-const App: React.FC = () => {   
+const App: React.FC = () => {
   const { t, i18n } = useTranslation();
   const [inputText, setInputText] = useState('');
   const [outputText, setOutputText] = useState('');
@@ -178,11 +178,20 @@ Văn bản cần dịch:
       throw new Error(t('errors.noResponse'));
     }
 
-    const cleaned = rawText.replace(/```json|```/g, '').trim();
+    // Extract JSON object from the response
+    let cleaned = rawText.replace(/```json|```/g, '').trim();
+    const firstBrace = cleaned.indexOf('{');
+    const lastBrace = cleaned.lastIndexOf('}');
+
+    if (firstBrace !== -1 && lastBrace !== -1) {
+      cleaned = cleaned.substring(firstBrace, lastBrace + 1);
+    }
+
     let parsed: { translatedText?: string; detectedLang?: string };
     try {
       parsed = JSON.parse(cleaned);
     } catch (err) {
+      console.error('Failed to parse Gemini response:', rawText);
       throw new Error(t('errors.invalidTranslationResponse'));
     }
 
@@ -196,8 +205,11 @@ Văn bản cần dịch:
     };
   };
 
-  const handleTranslate = async () => {
-    if (!inputText.trim()) {
+  const handleTranslate = async (arg?: string | React.MouseEvent) => {
+    const textOverride = typeof arg === 'string' ? arg : undefined;
+    const textToTranslate = (textOverride ?? inputText).trim();
+
+    if (!textToTranslate.trim()) {
       setError(t('errors.inputRequired'));
       return;
     }
@@ -207,23 +219,49 @@ Văn bản cần dịch:
     setOutputText('');
 
     try {
-      const targetLabel = languages[targetLang] || targetLang;
-      const { translatedText, detectedLang: detected } = await translateWithGemini(
-        inputText,
-        targetLang,
+      let currentTarget = targetLang;
+      let targetLabel = languages[currentTarget] || currentTarget;
+
+      // First translation attempt
+      let { translatedText, detectedLang: detected } = await translateWithGemini(
+        textToTranslate,
+        currentTarget,
         targetLabel,
         sourceLang === 'auto' ? undefined : sourceLang
       );
 
-      setOutputText(translatedText);
       const detectedCode = detected || 'auto';
-      setDetectedLang(detectedCode);
 
-      if (sourceLang === 'auto' && detectedCode !== 'auto' && languages[detectedCode]) {
-        if (detectedCode !== targetLang) {
-          setSourceLang(detectedCode);
+      // Smart Language Switching Logic
+      if (detectedCode !== 'auto') {
+        // Always update source language to what was detected
+        setSourceLang(detectedCode);
+
+        // If detected source language is the same as the current target language
+        if (detectedCode === currentTarget) {
+          const defaultTarget = 'en';
+
+          // Switch target to English if it's not already English
+          if (currentTarget !== defaultTarget) {
+            currentTarget = defaultTarget;
+            targetLabel = languages[currentTarget] || currentTarget;
+            setTargetLang(currentTarget);
+
+            // Re-translate with the new target language
+            const retryResult = await translateWithGemini(
+              textToTranslate,
+              currentTarget,
+              targetLabel,
+              detectedCode
+            );
+            translatedText = retryResult.translatedText;
+          }
         }
       }
+
+      setOutputText(translatedText);
+      setDetectedLang(detectedCode);
+
     } catch (err) {
       setError(err instanceof Error ? err.message : t('errors.unknown'));
     } finally {
@@ -261,10 +299,7 @@ Văn bản cần dịch:
     }
   };
 
-  const handleImageSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
+  const processImage = async (file: File) => {
     // Kiểm tra định dạng file
     if (!file.type.startsWith('image/')) {
       setError(t('errors.invalidImageFile'));
@@ -280,21 +315,17 @@ Văn bản cần dịch:
     setError(null);
 
     try {
-      let text = '';
-
       // Sử dụng Gemini API (miễn phí, không cần billing)
-      text = await recognizeWithGemini(file);
+      const text = await recognizeWithGemini(file);
 
       // Làm sạch văn bản
       const cleanedText = text.trim();
-      
+
       if (cleanedText) {
         setInputText(cleanedText);
         setImagePreview(null);
         // Tự động dịch sau khi nhận diện
-        setTimeout(() => {
-          handleTranslate();
-        }, 100);
+        await handleTranslate(cleanedText);
       } else {
         setError(t('errors.noTextFoundInImage'));
       }
@@ -309,9 +340,13 @@ Văn bản cần dịch:
     }
   };
 
-  const handleCaptureClick = () => {
-    fileInputRef.current?.click();
+  const handleImageSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    await processImage(file);
   };
+
+
 
   // OCR với Google Gemini API (miễn phí, không cần billing)
   const recognizeWithGemini = async (file: File): Promise<string> => {
@@ -372,7 +407,7 @@ Văn bản cần dịch:
 
     const data = await response.json();
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    
+
     if (!text) {
       return '';
     }
@@ -383,8 +418,8 @@ Văn bản cần dịch:
   const translateButtonLabel = isProcessingOCR
     ? `🔍 ${t('status.ocrInProgress')}`
     : isTranslating
-    ? `🔄 ${t('status.translating')}`
-    : `✨ ${t('buttons.translate')}`;
+      ? `🔄 ${t('status.translating')}`
+      : `✨ ${t('buttons.translate')}`;
 
   const handleUiLanguageChange = (code: string) => {
     i18n.changeLanguage(code);
@@ -407,6 +442,9 @@ Văn bản cần dịch:
 
   useEffect(() => {
     const handlePaste = (event: ClipboardEvent) => {
+      // Don't intercept if language picker is open
+      if (languagePickerOpen) return;
+
       const clipboardData = event.clipboardData;
       if (!clipboardData) return;
 
@@ -414,15 +452,29 @@ Văn bản cần dịch:
       if (clipboardData.files && clipboardData.files.length > 0) {
         const file = clipboardData.files[0];
         if (file.type.startsWith('image/')) {
-          console.log('Paste detected: Image', file);
+          processImage(file);
           return;
         }
       }
 
       // Check for text
       const text = clipboardData.getData('text');
-      if (text) {
-        console.log('Paste detected: Text', text);
+      if (text && text.trim()) {
+        const activeElement = document.activeElement;
+        const isInput = activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement;
+
+        // If user is NOT typing in an input, OR if they are in the main source input,
+        // we want to trigger the "Paste & Translate" flow.
+        // However, if they are in the source input, we need to be careful not to double-paste.
+        // For now, let's only hijack if they are NOT in an input, to allow normal editing.
+        // BUT, the user requested "Ctrl+V ... api dịch luôn".
+        // So if they paste into the source box, maybe they WANT it to translate immediately?
+        // Let's implement: If not in an input, hijack.
+        if (!isInput) {
+          event.preventDefault();
+          setInputText(text);
+          handleTranslate(text);
+        }
       }
     };
 
@@ -430,7 +482,7 @@ Văn bản cần dịch:
     return () => {
       window.removeEventListener('paste', handlePaste);
     };
-  }, []);
+  }, [processImage, languagePickerOpen, handleTranslate]);
 
   const resolvedLanguage = i18n.resolvedLanguage || i18n.language || 'en';
   const currentUiLanguage = resolvedLanguage.split('-')[0];
