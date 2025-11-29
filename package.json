@@ -8,6 +8,7 @@
     "dev": "vite",
     "build": "tsc && vite build && electron-builder",
     "build:electron": "tsc -p tsconfig.translator.json && tsc -p tsconfig.electron.json && tsc -p tsconfig.preload.json && vite build",
+    "build:portable": "npm run build:electron && npx electron-builder build --win --x64 --dir",
     "preview": "vite preview",
     "electron:dev": "concurrently \"npm run dev\" \"tsc -p tsconfig.translator.json --watch\" \"tsc -p tsconfig.electron.json --watch\" \"tsc -p tsconfig.preload.json --watch\" \"wait-on http://localhost:5173 && electron .\"",
     "electron:build": "npm run build:electron && electron-builder",
@@ -58,15 +59,13 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "assets/icon.ico"
+      "verifyUpdateCodeSignature": false,
+      "sign": null
     },
-    "mac": {
-      "target": "dmg",
-      "icon": "assets/icon.icns"
-    },
-    "linux": {
-      "target": "AppImage",
-      "icon": "assets/icon.png"
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "differentialPackage": false
     }
   }
 }

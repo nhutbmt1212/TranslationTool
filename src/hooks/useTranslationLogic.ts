@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Languages } from '../types/languages';
+import { ApiKeyManager } from '../utils/apiKeyManager';
 
 interface TranslationResult {
     translatedText: string;
@@ -26,9 +27,9 @@ export const useTranslationLogic = (
         targetLabel: string,
         sourceLangCode?: string
     ): Promise<TranslationResult> => {
-        const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY?.trim();
+        const GEMINI_API_KEY = await ApiKeyManager.getApiKey();
         if (!GEMINI_API_KEY) {
-            throw new Error(t('errors.missingGeminiKey'));
+            throw new Error(t('errors.missingGeminiKey') || 'Please configure your API key in Settings');
         }
 
         const GEMINI_MODEL = 'gemini-2.5-flash-lite';

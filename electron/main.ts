@@ -24,6 +24,11 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       preload: join(__dirname, 'preload.js'),
+      // Tắt cache trong dev mode để tránh lỗi quyền truy cập
+      ...(process.env.NODE_ENV === 'development' && {
+        partition: 'persist:dev',
+        cache: false
+      }),
     },
     titleBarStyle: 'default',
     backgroundColor: '#1a1a1a',
@@ -43,7 +48,9 @@ function createWindow() {
     // Bạn có thể mở DevTools thủ công bằng Ctrl+Shift+I hoặc F12
     // window.webContents.openDevTools();
   } else {
-    window.loadFile(join(__dirname, '../dist/index.html'));
+    // Trong production, file được đóng gói trong app.asar
+    // Đường dẫn: dist-electron/electron/main.js -> ../../dist/index.html
+    window.loadFile(join(__dirname, '../../dist/index.html'));
   }
 
   // Ẩn menu bar hoàn toàn

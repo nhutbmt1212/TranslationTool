@@ -8,6 +8,7 @@ interface HeaderBarProps {
   onUiLanguageChange: (code: string) => void;
   theme: 'light' | 'dark';
   onThemeToggle: () => void;
+  onOpenSettings: () => void;
 }
 
 const HeaderBar: React.FC<HeaderBarProps> = ({
@@ -17,6 +18,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
   onUiLanguageChange,
   theme,
   onThemeToggle,
+  onOpenSettings,
 }) => {
   const { t } = useTranslation();
   const [uiMenuOpen, setUiMenuOpen] = useState(false);
@@ -102,17 +104,17 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
           </span>
           <span>{theme === 'light' ? t('header.darkMode', 'Dark') : t('header.lightMode', 'Light')}</span>
         </button>
-        {/* <button
+        <button
           type="button"
           className="hero-button"
-          onClick={onOpenLanguagePicker}
-          aria-label={t('buttons.openLanguagePicker') ?? undefined}
+          onClick={onOpenSettings}
+          aria-label={t('header.settings', 'Settings')}
         >
           <span className="hero-button-icon" aria-hidden="true">
-            🔤
+            ⚙️
           </span>
-          {t('buttons.openLanguagePicker')}
-        </button> */}
+          <span>{t('header.settings', 'Settings')}</span>
+        </button>
       </div>
     </header>
   );

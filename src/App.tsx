@@ -6,6 +6,7 @@ import SourcePanel from './components/SourcePanel';
 import TargetPanel from './components/TargetPanel';
 import LanguagePickerModal from './components/LanguagePickerModal';
 import ImagePreview from './components/ImagePreview';
+import SettingsModal from './components/SettingsModal';
 import { Languages, LanguageMetadata } from './types/languages';
 import { uiLanguageOptions } from './i18n';
 import { useOCR } from './hooks/useOCR';
@@ -77,6 +78,7 @@ const App: React.FC = () => {
 
   const [languagePickerOpen, setLanguagePickerOpen] = useState(false);
   const [languagePickerMode, setLanguagePickerMode] = useState<'source' | 'target'>('source');
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>(getInitialTheme);
   const copyResetTimers = useRef<{ source?: number; target?: number }>({});
   const [copyState, setCopyState] = useState({ source: false, target: false });
@@ -295,6 +297,7 @@ const App: React.FC = () => {
           onUiLanguageChange={handleUiLanguageChange}
           theme={theme}
           onThemeToggle={handleThemeToggle}
+          onOpenSettings={() => setSettingsOpen(true)}
         />
 
         <main className="main-content">
@@ -377,6 +380,10 @@ const App: React.FC = () => {
               setSourceLang('auto');
             }
           }}
+        />
+        <SettingsModal
+          open={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
         />
       </div>
     </div>
