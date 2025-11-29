@@ -46,6 +46,7 @@ const resources = {
         titleTarget: 'Select target language',
         tabSource: 'Source',
         tabTarget: 'Target',
+        eyebrow: 'Language roster',
       },
       general: {
         characters_one: '{{count}} character',
@@ -100,6 +101,7 @@ const resources = {
         titleTarget: 'Chọn ngôn ngữ đích',
         tabSource: 'Nguồn',
         tabTarget: 'Đích',
+        eyebrow: 'Bộ sưu tập ngôn ngữ',
       },
       general: {
         characters_one: '{{count}} ký tự',

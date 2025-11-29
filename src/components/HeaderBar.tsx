@@ -102,7 +102,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
           </span>
           <span>{theme === 'light' ? t('header.darkMode', 'Dark') : t('header.lightMode', 'Light')}</span>
         </button>
-        <button
+        {/* <button
           type="button"
           className="hero-button"
           onClick={onOpenLanguagePicker}
@@ -112,7 +112,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
             🔤
           </span>
           {t('buttons.openLanguagePicker')}
-        </button>
+        </button> */}
       </div>
     </header>
   );

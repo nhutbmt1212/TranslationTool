@@ -1,42 +1,31 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Languages } from '../types/languages';
-
 interface TargetPanelProps {
   targetLang: string;
-  sourceLang: string;
-  languages: Languages;
   outputText: string;
   charCount: number;
-  onTargetLangChange: (lang: string) => void;
   onCopy: () => void;
+  onOpenLanguagePicker: () => void;
+  targetLabel: string;
 }
 
 const TargetPanel: React.FC<TargetPanelProps> = ({
   targetLang,
-  sourceLang,
-  languages,
   outputText,
   charCount,
-  onTargetLangChange,
   onCopy,
+  onOpenLanguagePicker,
+  targetLabel,
 }) => {
   const { t } = useTranslation();
 
   return (
     <div className="translation-box target-box">
       <div className="panel-top simple-panel-header">
-        <select
-          value={targetLang}
-          onChange={(e) => onTargetLangChange(e.target.value)}
-          className="lang-select simple-select"
-        >
-          {Object.entries(languages).map(([code, name]) => (
-            <option key={code} value={code} disabled={sourceLang !== 'auto' && code === sourceLang}>
-              {name}
-            </option>
-          ))}
-        </select>
+        <button type="button" className="simple-select-trigger" onClick={onOpenLanguagePicker}>
+          <span className="select-label">{targetLabel}</span>
+          <span className="select-caret" aria-hidden="true" />
+        </button>
       </div>
       <textarea
         className="text-output simple-textarea"

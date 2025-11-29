@@ -78,6 +78,11 @@ const App: React.FC = () => {
   const [languagePickerMode, setLanguagePickerMode] = useState<'source' | 'target'>('source');
   const [theme, setTheme] = useState<'light' | 'dark'>(getInitialTheme);
 
+  const openLanguagePicker = (mode: 'source' | 'target') => {
+    setLanguagePickerMode(mode);
+    setLanguagePickerOpen(true);
+  };
+
   const inputChars = inputText.length;
   const outputChars = outputText.length;
 
@@ -130,13 +135,15 @@ const App: React.FC = () => {
       ? `Nguồn văn bản sử dụng mã ngôn ngữ ${sourceLangCode}.`
       : 'Hãy tự động phát hiện ngôn ngữ nguồn và trả về mã ISO 639-1.';
 
-    const prompt = `Bạn là công cụ dịch chính xác.
+    const prompt = `Bạn là biên dịch viên bản ngữ, ưu tiên dịch tự nhiên và giàu ngữ cảnh.
 ${sourceInstruction}
-Dịch văn bản sang ${targetLabel} (mã ${targetLangCode}) và chỉ trả về JSON:
-{"detectedLang":"<mã nguồn>","translatedText":"<bản dịch>"}
-Giữ nguyên xuống dòng, không thêm giải thích hay ký hiệu.
+Hãy truyền đạt ý chính, sắc thái cảm xúc và mức độ trang trọng giống bản gốc nhưng chọn từ ngữ đời thường như người bản xứ.
+Không dịch word-by-word, tránh văn phong học thuật hoặc gượng gạo.
+Dịch sang ${targetLabel} (mã ${targetLangCode}) và chỉ trả về JSON:
+{"detectedLang":"<mã nguồn>","translatedText":"<bản dịch tự nhiên>"}
+Giữ nguyên bố cục dòng, không thêm lời giải thích, ký hiệu hay đoạn thừa.
 
-Văn bản:
+Văn bản cần dịch:
 """${text}"""`;
 
     const response = await fetch(
@@ -387,10 +394,7 @@ Văn bản:
       <div className="grid-overlay" aria-hidden="true" />
       <div className="app-surface">
         <HeaderBar
-          onOpenLanguagePicker={() => {
-            setLanguagePickerMode('source');
-            setLanguagePickerOpen(true);
-          }}
+          onOpenLanguagePicker={() => openLanguagePicker('source')}
           uiLanguageOptions={uiLanguageOptions}
           currentUiLanguage={currentUiLanguage}
           onUiLanguageChange={handleUiLanguageChange}
@@ -402,18 +406,18 @@ Văn bản:
           <section className="translation-section">
             <SourcePanel
               sourceLang={sourceLang}
-              targetLang={targetLang}
               languages={languages}
               inputText={inputText}
               detectedLang={detectedLang}
               isProcessingOCR={isProcessingOCR}
               charCount={inputChars}
               fileInputRef={fileInputRef}
-              onSourceLangChange={setSourceLang}
               onInputTextChange={setInputText}
               onCaptureClick={handleCaptureClick}
               onImageSelect={handleImageSelect}
               onCopy={() => handleCopy(inputText)}
+              onOpenLanguagePicker={() => openLanguagePicker('source')}
+              sourceLabel={sourceLabel}
             />
 
             <div className="swap-panel">
@@ -431,12 +435,11 @@ Văn bản:
 
             <TargetPanel
               targetLang={targetLang}
-              sourceLang={sourceLang}
-              languages={languages}
               outputText={outputText}
               charCount={outputChars}
-              onTargetLangChange={setTargetLang}
               onCopy={() => handleCopy(outputText)}
+              onOpenLanguagePicker={() => openLanguagePicker('target')}
+              targetLabel={targetLabel}
             />
           </section>
 
@@ -471,11 +474,12 @@ Văn bản:
             </div>
             <button
               type="button"
-              className="translate-button"
+              className={`translate-button${isTranslating ? ' loading' : ''}`}
               onClick={handleTranslate}
               disabled={isTranslating || isProcessingOCR || !inputText.trim()}
             >
-              {translateButtonLabel}
+              {isTranslating && <span className="button-spinner" aria-hidden="true" />}
+              <span className="translate-button-label">{translateButtonLabel}</span>
             </button>
           </section>
 

@@ -4,34 +4,34 @@ import { Languages } from '../types/languages';
 
 interface SourcePanelProps {
   sourceLang: string;
-  targetLang: string;
   languages: Languages;
   inputText: string;
   detectedLang: string;
   isProcessingOCR: boolean;
   charCount: number;
   fileInputRef: React.RefObject<HTMLInputElement>;
-  onSourceLangChange: (lang: string) => void;
   onInputTextChange: (text: string) => void;
   onCaptureClick: () => void;
   onImageSelect: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onCopy: () => void;
+  onOpenLanguagePicker: () => void;
+  sourceLabel: string;
 }
 
 const SourcePanel: React.FC<SourcePanelProps> = ({
   sourceLang,
-  targetLang,
   languages,
   inputText,
   detectedLang,
   isProcessingOCR,
   charCount,
   fileInputRef,
-  onSourceLangChange,
   onInputTextChange,
   onCaptureClick,
   onImageSelect,
   onCopy,
+  onOpenLanguagePicker,
+  sourceLabel,
 }) => {
   const { t } = useTranslation();
 
@@ -43,18 +43,14 @@ const SourcePanel: React.FC<SourcePanelProps> = ({
   return (
     <div className="translation-box source-box">
       <div className="panel-top simple-panel-header">
-        <select
-          value={sourceLang}
-          onChange={(e) => onSourceLangChange(e.target.value)}
-          className="lang-select simple-select"
+        <button
+          type="button"
+          className="simple-select-trigger"
+          onClick={onOpenLanguagePicker}
         >
-          <option value="auto">{t('source.autoDetect')}</option>
-          {Object.entries(languages).map(([code, name]) => (
-            <option key={code} value={code} disabled={code === targetLang}>
-              {name}
-            </option>
-          ))}
-        </select>
+          <span className="select-label">{sourceLabel}</span>
+          <span className="select-caret" aria-hidden="true" />
+        </button>
         {detectedLabel && (
           <span className="detected-chip simple-detected">
             {t('source.autoDetect')}: {detectedLabel}
@@ -67,6 +63,7 @@ const SourcePanel: React.FC<SourcePanelProps> = ({
         value={inputText}
         onChange={(e) => onInputTextChange(e.target.value)}
         rows={8}
+        spellCheck={false}
       />
       <div className="box-footer simple-footer">
         <div className="footer-left">

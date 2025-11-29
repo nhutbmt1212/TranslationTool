@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Languages } from '../types/languages';
 
@@ -29,6 +29,7 @@ const LanguagePickerModal: React.FC<LanguagePickerModalProps> = ({
 }) => {
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleSelect = (code: string) => {
     if (mode === 'source') {
@@ -48,17 +49,70 @@ const LanguagePickerModal: React.FC<LanguagePickerModalProps> = ({
 
   const titleKey = mode === 'source' ? 'languagePicker.titleSource' : 'languagePicker.titleTarget';
 
+  const baseLanguageEntries = useMemo(() => {
+    const entries = Object.entries(languages).sort((a, b) =>
+      a[1].localeCompare(b[1], undefined, { sensitivity: 'base' })
+    );
+
+    if (mode === 'source') {
+      const autoLabel = t('source.autoDetect', 'Auto detect');
+      return [['auto', autoLabel], ...entries];
+    }
+
+    return entries;
+  }, [languages, mode, t]);
+
   const filteredLanguages = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
     if (!query) {
-      return Object.entries(languages);
+      return baseLanguageEntries;
     }
 
-    return Object.entries(languages).filter(([code, name]) => {
+    return baseLanguageEntries.filter(([code, name]) => {
       const haystack = `${name} ${code}`.toLowerCase();
       return haystack.includes(query);
     });
-  }, [languages, searchTerm]);
+  }, [baseLanguageEntries, searchTerm]);
+
+  const sanitizeInput = useCallback((value: string) => value.replace(/[^\p{L}]/gu, ''), []);
+
+  const isLetterKey = useCallback((value: string) => /^\p{L}$/u.test(value), []);
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+        return;
+      }
+
+      const target = event.target as HTMLElement | null;
+      const isInputFocused = target && inputRef.current && inputRef.current.contains(target);
+      if (isInputFocused) {
+        return;
+      }
+
+      if (event.ctrlKey || event.altKey || event.metaKey) {
+        return;
+      }
+
+      if (event.key.length === 1) {
+        if (isLetterKey(event.key)) {
+          event.preventDefault();
+          inputRef.current?.focus();
+          setSearchTerm((prev) => sanitizeInput(`${prev}${event.key}`));
+        } else {
+          event.preventDefault();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open, onClose, isLetterKey, sanitizeInput]);
 
   if (!open) return null;
 
@@ -82,8 +136,9 @@ const LanguagePickerModal: React.FC<LanguagePickerModalProps> = ({
         <div className="picker-search">
           <input
             type="text"
+            ref={inputRef}
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => setSearchTerm(sanitizeInput(e.target.value))}
             placeholder={t('languagePicker.searchPlaceholder', 'Search languages...') ?? 'Search languages...'}
           />
           {searchTerm && (
