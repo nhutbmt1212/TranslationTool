@@ -7,6 +7,7 @@ interface TargetPanelProps {
   onCopy: () => void;
   onOpenLanguagePicker: () => void;
   targetLabel: string;
+  copied: boolean;
 }
 
 const TargetPanel: React.FC<TargetPanelProps> = ({
@@ -16,6 +17,7 @@ const TargetPanel: React.FC<TargetPanelProps> = ({
   onCopy,
   onOpenLanguagePicker,
   targetLabel,
+  copied,
 }) => {
   const { t } = useTranslation();
 
@@ -43,7 +45,7 @@ const TargetPanel: React.FC<TargetPanelProps> = ({
             title={t('buttons.copy') ?? undefined}
             disabled={!outputText}
           >
-            📋
+            {copied ? '✓' : '📋'}
           </button>
         </div>
         <span className="char-count simple-char-count target-footer-right">
