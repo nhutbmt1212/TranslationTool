@@ -61,6 +61,9 @@
   --orb-two: #3cdfff;
   --shadow-soft: 0 18px 45px rgba(15, 23, 42, 0.12);
   --blur: saturate(150%) blur(12px);
+  --translate-btn-bg: linear-gradient(120deg, #b19bff, #8cb7ff);
+  --translate-btn-text: #4b4f68;
+  --translate-btn-shadow: 0 12px 24px rgba(124, 93, 250, 0.25);
 }
 
 :root[data-theme='dark'] {
@@ -118,6 +121,9 @@
   --logo-glow: rgba(124, 93, 250, 0.45);
   --orb-one: #4b16fa;
   --orb-two: #14b8ff;
+  --translate-btn-bg: linear-gradient(120deg, #6366f1, #4f46e5);
+  --translate-btn-text: #ffffff;
+  --translate-btn-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
 }
 
 * {

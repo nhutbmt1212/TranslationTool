@@ -9,10 +9,8 @@
 .grid-overlay {
   position: absolute;
   inset: 0;
-  background-image: linear-gradient(
-      rgba(255, 255, 255, 0.03) 1px,
-      transparent 1px
-    ),
+  background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px,
+      transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
   background-size: 60px 60px;
   opacity: 0.5;
@@ -76,7 +74,7 @@
   align-items: center;
   justify-content: flex-start;
   gap: 8px;
-  text-align:center;
+  text-align: center;
   padding: 0 16px;
   color: var(--swap-text);
 }
@@ -123,7 +121,7 @@
   flex-wrap: wrap;
   gap: 16px;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
 }
 
 .stat-group {
@@ -132,25 +130,7 @@
   flex-wrap: wrap;
 }
 
-.stat-chip {
-  padding: 14px 18px;
-  border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
-}
 
-.stat-chip span {
-  font-size: 11px;
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-}
-
-.stat-chip strong {
-  display: block;
-  margin-top: 4px;
-  font-size: 15px;
-}
 
 .translate-button {
   display: inline-flex;
@@ -160,14 +140,14 @@
   padding: 12px 28px;
   border: none;
   border-radius: 999px;
-  background: linear-gradient(120deg, #b19bff, #8cb7ff);
-  color: #4b4f68;
+  background: var(--translate-btn-bg);
+  color: var(--translate-btn-text);
   font-weight: 700;
   font-size: 16px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   cursor: pointer;
-  box-shadow: 0 12px 24px rgba(124, 93, 250, 0.25);
+  box-shadow: var(--translate-btn-shadow);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 

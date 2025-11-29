@@ -137,16 +137,19 @@ const App: React.FC = () => {
       ? `Nguồn văn bản sử dụng mã ngôn ngữ ${sourceLangCode}.`
       : 'Hãy tự động phát hiện ngôn ngữ nguồn và trả về mã ISO 639-1.';
 
-    const prompt = `Bạn là biên dịch viên bản ngữ, ưu tiên dịch tự nhiên và giàu ngữ cảnh.
+    const prompt = `You are a professional translator.
+Translate the following text to ${targetLabel} (ISO code: ${targetLangCode}).
 ${sourceInstruction}
-Hãy truyền đạt ý chính, sắc thái cảm xúc và mức độ trang trọng giống bản gốc nhưng chọn từ ngữ đời thường như người bản xứ.
-Không dịch word-by-word, tránh văn phong học thuật hoặc gượng gạo.
-Dịch sang ${targetLabel} (mã ${targetLangCode}) và chỉ trả về JSON:
-{"detectedLang":"<mã nguồn>","translatedText":"<bản dịch tự nhiên>"}
-Giữ nguyên bố cục dòng, không thêm lời giải thích, ký hiệu hay đoạn thừa.
 
-Văn bản cần dịch:
-"""${text}"""`;
+STRICTLY RETURN ONLY A VALID JSON OBJECT. NO MARKDOWN. NO CODE BLOCKS. NO EXTRA TEXT.
+The JSON must have exactly this structure:
+{
+  "detectedLang": "source_language_iso_code",
+  "translatedText": "translated_text_here"
+}
+
+Text to translate:
+${JSON.stringify(text)}`;
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
@@ -159,6 +162,9 @@ Văn bản cần dịch:
               parts: [{ text: prompt }],
             },
           ],
+          generationConfig: {
+            responseMimeType: "application/json"
+          }
         }),
       }
     );
@@ -214,6 +220,11 @@ Văn bản cần dịch:
       return;
     }
 
+    // If pasting/image (override), switch to Auto immediately
+    if (textOverride) {
+      setSourceLang('auto');
+    }
+
     setIsTranslating(true);
     setError(null);
     setOutputText('');
@@ -222,20 +233,27 @@ Văn bản cần dịch:
       let currentTarget = targetLang;
       let targetLabel = languages[currentTarget] || currentTarget;
 
+      // If we have new text (override), we should ignore the current source selection 
+      // and force auto-detection to ensure we get the correct source language.
+      const sourceToUse = textOverride ? undefined : (sourceLang === 'auto' ? undefined : sourceLang);
+
       // First translation attempt
       let { translatedText, detectedLang: detected } = await translateWithGemini(
         textToTranslate,
         currentTarget,
         targetLabel,
-        sourceLang === 'auto' ? undefined : sourceLang
+        sourceToUse
       );
 
       const detectedCode = detected || 'auto';
 
       // Smart Language Switching Logic
       if (detectedCode !== 'auto') {
-        // Always update source language to what was detected
-        setSourceLang(detectedCode);
+        // If it's NOT an override (manual typing), update the source language to match detection.
+        // If it IS an override (paste), keep it as 'auto' (as requested).
+        if (!textOverride) {
+          setSourceLang(detectedCode);
+        }
 
         // If detected source language is the same as the current target language
         if (detectedCode === currentTarget) {
@@ -547,32 +565,16 @@ Văn bản cần dịch:
           {imagePreview && (
             <div className="image-preview-container">
               <img src={imagePreview} alt="Preview" className="image-preview" />
-              <button
-                type="button"
-                className="close-preview-button"
-                onClick={() => {
-                  setImagePreview(null);
-                  if (fileInputRef.current) {
-                    fileInputRef.current.value = '';
-                  }
-                }}
-              >
-                ✕
-              </button>
+              {isProcessingOCR && (
+                <div className="ocr-progress-bar">
+                  <div className="ocr-progress-indicator" />
+                </div>
+              )}
             </div>
           )}
 
           <section className="action-bar">
-            <div className="stat-group">
-              <div className="stat-chip">
-                <span>{t('languagePicker.tabSource')}</span>
-                <strong>{t('general.characters', { count: inputChars })}</strong>
-              </div>
-              <div className="stat-chip">
-                <span>{t('languagePicker.tabTarget')}</span>
-                <strong>{t('general.characters', { count: outputChars })}</strong>
-              </div>
-            </div>
+
             <button
               type="button"
               className={`translate-button${isTranslating ? ' loading' : ''}`}

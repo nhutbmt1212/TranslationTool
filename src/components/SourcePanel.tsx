@@ -29,11 +29,6 @@ const SourcePanel: React.FC<SourcePanelProps> = ({
 }) => {
   const { t } = useTranslation();
 
-  const detectedLabel =
-    sourceLang === 'auto' && detectedLang !== 'auto'
-      ? languages[detectedLang] || detectedLang.toUpperCase()
-      : null;
-
   return (
     <div className="translation-box source-box">
       <div className="panel-top simple-panel-header">
@@ -45,11 +40,6 @@ const SourcePanel: React.FC<SourcePanelProps> = ({
           <span className="select-label">{sourceLabel}</span>
           <span className="select-caret" aria-hidden="true" />
         </button>
-        {detectedLabel && (
-          <span className="detected-chip simple-detected">
-            {t('source.autoDetect')}: {detectedLabel}
-          </span>
-        )}
       </div>
       <textarea
         className="text-input simple-textarea"

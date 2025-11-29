@@ -138,7 +138,7 @@ const LanguagePickerModal: React.FC<LanguagePickerModalProps> = ({
             type="text"
             ref={inputRef}
             value={searchTerm}
-            onChange={(e) => setSearchTerm(sanitizeInput(e.target.value))}
+            onChange={(e) => setSearchTerm(e.target.value)}
             placeholder={t('languagePicker.searchPlaceholder', 'Search languages...') ?? 'Search languages...'}
           />
           {searchTerm && (

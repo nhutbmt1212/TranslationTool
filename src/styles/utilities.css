@@ -3,6 +3,7 @@
     opacity: 0;
     transform: translateY(-8px);
   }
+
   to {
     opacity: 1;
   }
@@ -12,8 +13,23 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes progress-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  50% {
+    transform: translateX(0%);
+  }
+
+  100% {
+    transform: translateX(100%);
   }
 }
 
@@ -52,6 +68,23 @@
 
 .close-preview-button:hover {
   transform: scale(1.1);
+}
+
+.ocr-progress-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.ocr-progress-indicator {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #b19bff, #8cb7ff);
+  animation: progress-indeterminate 1.5s infinite linear;
 }
 
 ::-webkit-scrollbar {
