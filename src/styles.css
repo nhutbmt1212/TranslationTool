@@ -690,14 +690,22 @@ body {
 }
 
 .target-footer {
-  justify-content: flex-end;
+  justify-content: space-between;
 }
 
-.footer-left {
+.footer-left,
+.source-footer-left,
+.target-footer-left {
   display: flex;
+  justify-content: flex-start;
+  flex: 1;
   gap: 12px;
 }
 
+.source-footer-right,
+.target-footer-right {
+  margin-left: auto;
+}
 
 .icon-button {
   width: 46px;

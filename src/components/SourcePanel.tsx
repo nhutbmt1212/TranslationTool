@@ -7,15 +7,12 @@ interface SourcePanelProps {
   languages: Languages;
   inputText: string;
   detectedLang: string;
-  isProcessingOCR: boolean;
   charCount: number;
-  fileInputRef: React.RefObject<HTMLInputElement>;
   onInputTextChange: (text: string) => void;
-  onCaptureClick: () => void;
-  onImageSelect: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onCopy: () => void;
   onOpenLanguagePicker: () => void;
   sourceLabel: string;
+  copied: boolean;
 }
 
 const SourcePanel: React.FC<SourcePanelProps> = ({
@@ -23,15 +20,12 @@ const SourcePanel: React.FC<SourcePanelProps> = ({
   languages,
   inputText,
   detectedLang,
-  isProcessingOCR,
   charCount,
-  fileInputRef,
   onInputTextChange,
-  onCaptureClick,
-  onImageSelect,
   onCopy,
   onOpenLanguagePicker,
   sourceLabel,
+  copied,
 }) => {
   const { t } = useTranslation();
 
@@ -65,24 +59,8 @@ const SourcePanel: React.FC<SourcePanelProps> = ({
         rows={8}
         spellCheck={false}
       />
-      <div className="box-footer simple-footer">
-        <div className="footer-left">
-          <button
-            type="button"
-            className="icon-button simple-icon-button"
-            onClick={onCaptureClick}
-            title={t('source.captureTitle') ?? undefined}
-            disabled={isProcessingOCR}
-          >
-            📷
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={onImageSelect}
-            style={{ display: 'none' }}
-          />
+      <div className="box-footer simple-footer source-footer">
+        <div className="source-footer-left">
           <button
             type="button"
             className="icon-button simple-icon-button"
@@ -90,10 +68,10 @@ const SourcePanel: React.FC<SourcePanelProps> = ({
             title={t('buttons.copy') ?? undefined}
             disabled={!inputText}
           >
-            📋
+            {copied ? '✓' : '📋'}
           </button>
         </div>
-        <span className="char-count simple-char-count">
+        <span className="char-count simple-char-count source-footer-right">
           {t('general.characters', { count: charCount })}
         </span>
       </div>

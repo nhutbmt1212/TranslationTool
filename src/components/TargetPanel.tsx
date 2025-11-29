@@ -35,16 +35,18 @@ const TargetPanel: React.FC<TargetPanelProps> = ({
         rows={8}
       />
       <div className="box-footer target-footer simple-footer">
-        <button
-          type="button"
-          className="icon-button simple-icon-button"
-          onClick={onCopy}
-          title={t('buttons.copy') ?? undefined}
-          disabled={!outputText}
-        >
-          📋
-        </button>
-        <span className="char-count simple-char-count">
+        <div className="target-footer-left">
+          <button
+            type="button"
+            className="icon-button simple-icon-button"
+            onClick={onCopy}
+            title={t('buttons.copy') ?? undefined}
+            disabled={!outputText}
+          >
+            📋
+          </button>
+        </div>
+        <span className="char-count simple-char-count target-footer-right">
           {t('general.characters', { count: charCount })}
         </span>
       </div>

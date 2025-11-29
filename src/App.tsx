@@ -77,6 +77,8 @@ const App: React.FC = () => {
   const [languagePickerOpen, setLanguagePickerOpen] = useState(false);
   const [languagePickerMode, setLanguagePickerMode] = useState<'source' | 'target'>('source');
   const [theme, setTheme] = useState<'light' | 'dark'>(getInitialTheme);
+  const copyResetTimers = useRef<{ source?: number; target?: number }>({});
+  const [copyState, setCopyState] = useState({ source: false, target: false });
 
   const openLanguagePicker = (mode: 'source' | 'target') => {
     setLanguagePickerMode(mode);
@@ -244,8 +246,19 @@ Văn bản cần dịch:
     }
   };
 
-  const handleCopy = (text: string) => {
+  const handleCopy = (text: string, panel?: 'source' | 'target') => {
+    if (!text) return;
     navigator.clipboard.writeText(text);
+
+    if (panel) {
+      setCopyState((prev) => ({ ...prev, [panel]: true }));
+      if (copyResetTimers.current[panel]) {
+        window.clearTimeout(copyResetTimers.current[panel]);
+      }
+      copyResetTimers.current[panel] = window.setTimeout(() => {
+        setCopyState((prev) => ({ ...prev, [panel]: false }));
+      }, 1200);
+    }
   };
 
   const handleImageSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -381,6 +394,17 @@ Văn bản cần dịch:
     setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
   };
 
+  useEffect(() => {
+    return () => {
+      if (copyResetTimers.current.source) {
+        window.clearTimeout(copyResetTimers.current.source);
+      }
+      if (copyResetTimers.current.target) {
+        window.clearTimeout(copyResetTimers.current.target);
+      }
+    };
+  }, []);
+
   const resolvedLanguage = i18n.resolvedLanguage || i18n.language || 'en';
   const currentUiLanguage = resolvedLanguage.split('-')[0];
   const sourceLabel =
@@ -409,15 +433,12 @@ Văn bản cần dịch:
               languages={languages}
               inputText={inputText}
               detectedLang={detectedLang}
-              isProcessingOCR={isProcessingOCR}
               charCount={inputChars}
-              fileInputRef={fileInputRef}
               onInputTextChange={setInputText}
-              onCaptureClick={handleCaptureClick}
-              onImageSelect={handleImageSelect}
-              onCopy={() => handleCopy(inputText)}
+              onCopy={() => handleCopy(inputText, 'source')}
               onOpenLanguagePicker={() => openLanguagePicker('source')}
               sourceLabel={sourceLabel}
+              copied={copyState.source}
             />
 
             <div className="swap-panel">
@@ -437,9 +458,10 @@ Văn bản cần dịch:
               targetLang={targetLang}
               outputText={outputText}
               charCount={outputChars}
-              onCopy={() => handleCopy(outputText)}
+              onCopy={() => handleCopy(outputText, 'target')}
               onOpenLanguagePicker={() => openLanguagePicker('target')}
               targetLabel={targetLabel}
+              copied={copyState.target}
             />
           </section>
 
