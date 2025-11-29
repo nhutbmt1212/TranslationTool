@@ -1,0 +1,251 @@
+.app-shell {
+  position: relative;
+  min-height: 100vh;
+  padding: clamp(16px, 3vw, 48px);
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.grid-overlay {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(
+      rgba(255, 255, 255, 0.03) 1px,
+      transparent 1px
+    ),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.orb {
+  position: absolute;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.orb-one {
+  top: -80px;
+  right: 10%;
+  background: var(--orb-one);
+}
+
+.orb-two {
+  bottom: -120px;
+  left: 5%;
+  background: var(--orb-two);
+}
+
+.app-surface {
+  position: relative;
+  z-index: 1;
+  max-width: 1100px;
+  margin: 0 auto;
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: 28px;
+  padding: clamp(20px, 4vw, 36px);
+  box-shadow: var(--surface-shadow);
+}
+
+.main-content {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.translation-section {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.swap-panel {
+  align-self: stretch;
+  border-radius: 16px;
+  background: var(--swap-panel-bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  text-align:center;
+  padding: 0 16px;
+  color: var(--swap-text);
+}
+
+.swap-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.swap-button {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  border: 1px solid var(--swap-button-border);
+  background: var(--panel);
+  color: var(--accent);
+  font-size: 20px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+  margin-top: 0;
+}
+
+.swap-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: var(--accent);
+}
+
+.swap-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.swap-hint {
+  font-size: 12px;
+  color: #9aa2c2;
+}
+
+.action-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.stat-group {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.stat-chip {
+  padding: 14px 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.stat-chip span {
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.stat-chip strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 15px;
+}
+
+.translate-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 28px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(120deg, #b19bff, #8cb7ff);
+  color: #4b4f68;
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 12px 24px rgba(124, 93, 250, 0.25);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.translate-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 30px rgba(99, 102, 241, 0.35);
+}
+
+.translate-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.translate-button.loading {
+  cursor: wait;
+  opacity: 0.9;
+}
+
+.translate-button .button-spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #ffffff;
+  animation: spinner-rotate 0.8s linear infinite;
+}
+
+.translate-button .translate-button-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.error-banner {
+  padding: 16px 20px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 125, 125, 0.5);
+  background: rgba(255, 125, 125, 0.08);
+  color: var(--error);
+  text-align: center;
+  animation: slideIn 0.4s ease;
+}
+
+@media (max-width: 1024px) {
+  .translation-section {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .swap-panel {
+    order: -1;
+    flex-direction: row;
+    width: 100%;
+    padding: 18px 20px;
+  }
+
+  .swap-button {
+    width: 60px;
+    height: 60px;
+  }
+}
+
+@media (max-width: 640px) {
+  .app-surface {
+    padding: 20px;
+  }
+
+  .translation-section {
+    gap: 12px;
+  }
+
+  .action-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .translate-button {
+    width: 100%;
+  }
+}
