@@ -11,7 +11,7 @@ export class ApiKeyManager {
     private static cachedKey: string | null = null;
 
     /**
-     * Save API key to sessionStorage (encrypted)
+     * Save API key to localStorage (encrypted)
      */
     static async saveApiKey(apiKey: string): Promise<void> {
         if (!apiKey || apiKey.trim().length === 0) {
@@ -20,7 +20,7 @@ export class ApiKeyManager {
 
         try {
             const encrypted = await encrypt(apiKey.trim());
-            sessionStorage.setItem(STORAGE_KEY, encrypted);
+            localStorage.setItem(STORAGE_KEY, encrypted);
             this.cachedKey = apiKey.trim();
         } catch (error) {
             console.error('Failed to save API key:', error);
@@ -29,7 +29,7 @@ export class ApiKeyManager {
     }
 
     /**
-     * Get API key from sessionStorage (decrypted)
+     * Get API key from localStorage (decrypted)
      * Returns cached version if available
      */
     static async getApiKey(): Promise<string | null> {
@@ -39,7 +39,7 @@ export class ApiKeyManager {
         }
 
         try {
-            const encrypted = sessionStorage.getItem(STORAGE_KEY);
+            const encrypted = localStorage.getItem(STORAGE_KEY);
             if (!encrypted) {
                 return null;
             }
@@ -59,14 +59,14 @@ export class ApiKeyManager {
      * Check if API key exists
      */
     static hasApiKey(): boolean {
-        return sessionStorage.getItem(STORAGE_KEY) !== null || this.cachedKey !== null;
+        return localStorage.getItem(STORAGE_KEY) !== null || this.cachedKey !== null;
     }
 
     /**
      * Clear API key from storage and cache
      */
     static clearApiKey(): void {
-        sessionStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(STORAGE_KEY);
         this.cachedKey = null;
     }
 

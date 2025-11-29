@@ -6,15 +6,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build && electron-builder",
-    "build:electron": "tsc -p tsconfig.translator.json && tsc -p tsconfig.electron.json && tsc -p tsconfig.preload.json && vite build",
-    "build:portable": "npm run build:electron && npx electron-builder build --win --x64 --dir",
+    "build:src": "tsc -p tsconfig.translator.json && tsc -p tsconfig.electron.json && tsc -p tsconfig.preload.json && vite build",
+    "build": "npm run build:src && electron-builder build --win --x64 --dir",
     "preview": "vite preview",
-    "electron:dev": "concurrently \"npm run dev\" \"tsc -p tsconfig.translator.json --watch\" \"tsc -p tsconfig.electron.json --watch\" \"tsc -p tsconfig.preload.json --watch\" \"wait-on http://localhost:5173 && electron .\"",
-    "electron:build": "npm run build:electron && electron-builder",
-    "cli:build": "tsc -p tsconfig.cli.json",
-    "cli:dev": "tsx src/cli/index.ts",
-    "cli:start": "node dist-cli/index.js"
+    "electron:dev": "concurrently \"npm run dev\" \"tsc -p tsconfig.translator.json --watch\" \"tsc -p tsconfig.electron.json --watch\" \"tsc -p tsconfig.preload.json --watch\" \"wait-on http://localhost:5173 && electron .\""
   },
   "keywords": [
     "translate",

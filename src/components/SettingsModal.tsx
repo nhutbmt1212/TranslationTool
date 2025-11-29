@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ApiKeyManager } from '../utils/apiKeyManager';
+import '../styles/modal.css';
 import '../styles/settings-modal.css';
 
 interface SettingsModalProps {
@@ -85,7 +86,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) => {
     if (!open) return null;
 
     return (
-        <div className="modal-overlay" onClick={handleClose}>
+        <div className="language-picker-overlay" onClick={handleClose}>
             <div className="settings-modal" onClick={(e) => e.stopPropagation()}>
                 <div className="settings-modal-header">
                     <h2>⚙️ {t('settings.title') || 'Settings'}</h2>
@@ -104,7 +105,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) => {
                         <h3>🔑 {t('settings.apiKey.title') || 'Gemini API Key'}</h3>
                         <p className="settings-description">
                             {t('settings.apiKey.description') ||
-                                'Your API key is encrypted and stored securely in your browser session. It will be cleared when you close the app.'}
+                                'Your API key is encrypted and stored securely in your browser. It will persist across sessions.'}
                         </p>
 
                         {maskedKey && (
@@ -210,7 +211,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) => {
                         <h3>🔒 {t('settings.security.title') || 'Security'}</h3>
                         <ul className="security-info">
                             <li>✓ {t('settings.security.encrypted') || 'API key is encrypted using AES-GCM'}</li>
-                            <li>✓ {t('settings.security.session') || 'Stored only in browser session (cleared on close)'}</li>
+                            <li>✓ {t('settings.security.session') || 'Stored in browser local storage (persists across sessions)'}</li>
                             <li>✓ {t('settings.security.device') || 'Encryption key is device-specific'}</li>
                             <li>✓ {t('settings.security.noServer') || 'Never sent to any server except Google AI'}</li>
                         </ul>
