@@ -40,6 +40,7 @@
   --hero-pill-bg: #f7f8ff;
   --hero-pill-border: #d9def1;
   --hero-pill-highlight: rgba(255, 255, 255, 0.9);
+  --hero-heading-gradient: linear-gradient(120deg, #2f2f49 0%, #4f46e5 35%, #6d28d9 65%, #a855f7 100%);
   --hero-button-border: rgba(173, 190, 255, 0.8);
   --hero-menu-bg: #ffffff;
   --hero-menu-border: #dfe4f6;
@@ -105,6 +106,7 @@
   --hero-pill-bg: rgba(22, 25, 43, 0.95);
   --hero-pill-border: rgba(255, 255, 255, 0.14);
   --hero-pill-highlight: rgba(255, 255, 255, 0.05);
+  --hero-heading-gradient: linear-gradient(120deg, #ffffff 0%, #b6b0ff 50%, #7c5dfa 90%);
   --hero-button-border: rgba(14, 21, 46, 0.8);
   --hero-menu-bg: #0f1123;
   --hero-menu-border: rgba(255, 255, 255, 0.12);

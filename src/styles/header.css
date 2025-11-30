@@ -71,7 +71,7 @@
   font-size: clamp(32px, 6vw, 48px);
   font-weight: 600;
   letter-spacing: -0.02em;
-  background: linear-gradient(120deg, #ffffff, #b6b0ff 50%, #7c5dfa 90%);
+  background: var(--hero-heading-gradient);
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
