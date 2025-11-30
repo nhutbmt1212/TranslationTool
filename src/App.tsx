@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Toaster } from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import languagesMetadata from './data/languages.json';
 import HeaderBar from './components/HeaderBar';
@@ -87,16 +88,12 @@ const App: React.FC = () => {
   const {
     isProcessingOCR,
     imagePreview,
-    ocrError,
     setImagePreview,
-    setOcrError,
     processImage
   } = useOCR();
 
   const {
     isTranslating,
-    translationError,
-    setTranslationError,
     handleTranslate
   } = useTranslationLogic(
     languages,
@@ -107,8 +104,6 @@ const App: React.FC = () => {
     setDetectedLang,
     setOutputText
   );
-
-  const error = ocrError || translationError;
 
   const openLanguagePicker = (mode: 'source' | 'target') => {
     setLanguagePickerMode(mode);
@@ -206,9 +201,14 @@ const App: React.FC = () => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    await processImage(file, (text) => {
-      setInputText(text);
-      handleTranslate(text, text); // Pass text as override
+    const currentTargetLabel = languages[targetLang] || targetLang;
+    await processImage(file, currentTargetLabel, (result) => {
+      setInputText(result.originalText);
+      setOutputText(result.translatedText);
+      if (result.detectedLang && result.detectedLang !== 'auto') {
+        setDetectedLang(result.detectedLang);
+        setSourceLang(result.detectedLang);
+      }
     });
   };
 
@@ -250,9 +250,14 @@ const App: React.FC = () => {
       if (clipboardData.files && clipboardData.files.length > 0) {
         const file = clipboardData.files[0];
         if (file.type.startsWith('image/')) {
-          processImage(file, (text) => {
-            setInputText(text);
-            handleTranslate(text, text);
+          const currentTargetLabel = languages[targetLang] || targetLang;
+          processImage(file, currentTargetLabel, (result) => {
+            setInputText(result.originalText);
+            setOutputText(result.translatedText);
+            if (result.detectedLang && result.detectedLang !== 'auto') {
+              setDetectedLang(result.detectedLang);
+              setSourceLang(result.detectedLang);
+            }
           });
           return;
         }
@@ -353,16 +358,29 @@ const App: React.FC = () => {
             </button>
           </section>
 
-          {error && (
-            <div className="error-banner" role="alert">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '8px' }}>
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="8" x2="12" y2="12" />
-                <line x1="12" y1="16" x2="12.01" y2="16" />
-              </svg>
-              {error}
-            </div>
-          )}
+          <Toaster
+            position="top-center"
+            toastOptions={{
+              style: {
+                background: '#333',
+                color: '#fff',
+                borderRadius: '8px',
+                padding: '12px 16px',
+              },
+              success: {
+                iconTheme: {
+                  primary: '#10B981',
+                  secondary: '#fff',
+                },
+              },
+              error: {
+                iconTheme: {
+                  primary: '#EF4444',
+                  secondary: '#fff',
+                },
+              },
+            }}
+          />
         </main>
         <LanguagePickerModal
           open={languagePickerOpen}

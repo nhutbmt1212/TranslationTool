@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import toast from 'react-hot-toast';
 import { Languages } from '../types/languages';
 import { ApiKeyManager } from '../utils/apiKeyManager';
 
@@ -19,7 +20,6 @@ export const useTranslationLogic = (
 ) => {
     const { t } = useTranslation();
     const [isTranslating, setIsTranslating] = useState(false);
-    const [translationError, setTranslationError] = useState<string | null>(null);
 
     const translateWithGemini = async (
         text: string,
@@ -114,7 +114,7 @@ ${JSON.stringify(text)}`;
         const textToTranslate = (textOverride ?? inputText).trim();
 
         if (!textToTranslate) {
-            setTranslationError(t('errors.inputRequired'));
+            toast.error(t('errors.inputRequired'));
             return;
         }
 
@@ -123,7 +123,6 @@ ${JSON.stringify(text)}`;
         }
 
         setIsTranslating(true);
-        setTranslationError(null);
         setOutputText('');
 
         try {
@@ -168,7 +167,7 @@ ${JSON.stringify(text)}`;
             setDetectedLang(detectedCode);
 
         } catch (err) {
-            setTranslationError(err instanceof Error ? err.message : t('errors.unknown'));
+            toast.error(err instanceof Error ? err.message : t('errors.unknown'));
         } finally {
             setIsTranslating(false);
         }
@@ -176,8 +175,6 @@ ${JSON.stringify(text)}`;
 
     return {
         isTranslating,
-        translationError,
-        setTranslationError,
         handleTranslate,
     };
 };

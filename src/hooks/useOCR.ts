@@ -1,12 +1,18 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import toast from 'react-hot-toast';
 import { ApiKeyManager } from '../utils/apiKeyManager';
+
+export interface OCRResult {
+    originalText: string;
+    translatedText: string;
+    detectedLang: string;
+}
 
 export const useOCR = () => {
     const { t } = useTranslation();
     const [isProcessingOCR, setIsProcessingOCR] = useState(false);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
-    const [ocrError, setOcrError] = useState<string | null>(null);
 
     const convertFileToBase64 = (file: File): Promise<string> =>
         new Promise((resolve, reject) => {
@@ -16,7 +22,7 @@ export const useOCR = () => {
             reader.readAsDataURL(file);
         });
 
-    const recognizeWithGemini = async (file: File): Promise<string> => {
+    const recognizeAndTranslateWithGemini = async (file: File, targetLang: string): Promise<OCRResult> => {
         const GEMINI_API_KEY = await ApiKeyManager.getApiKey();
         if (!GEMINI_API_KEY) {
             throw new Error(t('errors.missingGeminiKey'));
@@ -36,6 +42,21 @@ export const useOCR = () => {
         const mimeType = file.type || 'image/png';
         const GEMINI_MODEL = 'gemini-2.5-flash-lite';
 
+        const prompt = `
+        You are an expert OCR and translation system.
+        1. Extract ALL text from the provided image exactly as it appears (originalText).
+        2. Detect the language of the extracted text (detectedLang - ISO 639-1 code).
+        3. Translate the extracted text to ${targetLang} (translatedText).
+
+        STRICTLY RETURN ONLY A VALID JSON OBJECT. NO MARKDOWN. NO CODE BLOCKS.
+        Structure:
+        {
+            "originalText": "...",
+            "translatedText": "...",
+            "detectedLang": "..."
+        }
+        `;
+
         const response = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
             {
@@ -47,9 +68,7 @@ export const useOCR = () => {
                     contents: [
                         {
                             parts: [
-                                {
-                                    text: 'Extract all text from this image. Return only the text content, no explanations or additional text.'
-                                },
+                                { text: prompt },
                                 {
                                     inline_data: {
                                         mime_type: mimeType,
@@ -58,7 +77,10 @@ export const useOCR = () => {
                                 }
                             ]
                         }
-                    ]
+                    ],
+                    generationConfig: {
+                        responseMimeType: "application/json"
+                    }
                 }),
             }
         );
@@ -69,41 +91,55 @@ export const useOCR = () => {
         }
 
         const data = await response.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
-        if (!text) {
-            return '';
+        if (!rawText) {
+            throw new Error(t('errors.noTextFoundInImage'));
         }
 
-        return text.trim();
+        try {
+            const parsed = JSON.parse(rawText);
+            return {
+                originalText: parsed.originalText || '',
+                translatedText: parsed.translatedText || '',
+                detectedLang: parsed.detectedLang || 'auto'
+            };
+        } catch (e) {
+            console.error("Failed to parse OCR JSON", e);
+            // Fallback if JSON parsing fails but we have text (unlikely with responseMimeType)
+            return {
+                originalText: rawText,
+                translatedText: '',
+                detectedLang: 'auto'
+            };
+        }
     };
 
     const processImage = async (
         file: File,
-        onSuccess: (text: string) => void
+        targetLang: string,
+        onSuccess: (result: OCRResult) => void
     ) => {
         if (!file.type.startsWith('image/')) {
-            setOcrError(t('errors.invalidImageFile'));
+            toast.error(t('errors.invalidImageFile'));
             return;
         }
 
         const base64DataUrl = await convertFileToBase64(file);
         setImagePreview(base64DataUrl);
         setIsProcessingOCR(true);
-        setOcrError(null);
 
         try {
-            const text = await recognizeWithGemini(file);
-            const cleanedText = text.trim();
+            const result = await recognizeAndTranslateWithGemini(file, targetLang);
 
-            if (cleanedText) {
+            if (result.originalText) {
                 setImagePreview(null);
-                onSuccess(cleanedText);
+                onSuccess(result);
             } else {
-                setOcrError(t('errors.noTextFoundInImage'));
+                toast.error(t('errors.noTextFoundInImage'));
             }
         } catch (err) {
-            setOcrError(err instanceof Error ? err.message : t('errors.ocrFailure'));
+            toast.error(err instanceof Error ? err.message : t('errors.ocrFailure'));
         } finally {
             setIsProcessingOCR(false);
         }
@@ -112,9 +148,7 @@ export const useOCR = () => {
     return {
         isProcessingOCR,
         imagePreview,
-        ocrError,
         setImagePreview,
-        setOcrError,
         processImage,
     };
 };
