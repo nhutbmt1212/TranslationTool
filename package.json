@@ -58,7 +58,6 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "build/icon.svg",
       "verifyUpdateCodeSignature": false,
       "sign": null
     },

@@ -7,7 +7,8 @@ export interface IconProps {
 }
 
 const iconBaseStyle: React.CSSProperties = {
-  display: 'block',
+  display: 'inline-block',
+  verticalAlign: '-0.125em',
   flexShrink: 0,
 };
 

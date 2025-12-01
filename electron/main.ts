@@ -12,14 +12,14 @@ const translator = new Translator();
 
 function createWindow() {
   const { workArea } = screen.getPrimaryDisplay();
-  const desiredWidth = Math.floor(workArea.width * 0.8);
-  const desiredHeight = Math.floor(workArea.height * 0.9);
+  const desiredWidth = Math.floor(workArea.width * 0.65);
+  const desiredHeight = Math.floor(workArea.height * 0.6);
 
   mainWindow = new BrowserWindow({
     width: desiredWidth,
     height: desiredHeight,
     minWidth: 900,
-    minHeight: 600,
+    minHeight: 650,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
