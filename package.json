@@ -49,7 +49,8 @@
     "appId": "com.dalit.app",
     "productName": "DALIT",
     "directories": {
-      "output": "release"
+      "output": "release",
+      "buildResources": "build"
     },
     "files": [
       "dist-electron/**/*",
@@ -57,6 +58,7 @@
     ],
     "win": {
       "target": "nsis",
+      "icon": "build/icon.svg",
       "verifyUpdateCodeSignature": false,
       "sign": null
     },

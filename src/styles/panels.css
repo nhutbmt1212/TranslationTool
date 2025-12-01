@@ -171,6 +171,10 @@
   border: 1px solid var(--icon-button-border);
   color: var(--icon-button-color);
   transition: border-color 0.2s ease, color 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
 }
 
 .simple-icon-button:hover:not(:disabled) {
@@ -214,10 +218,13 @@
   border-radius: 14px;
   border: 1px solid var(--icon-button-border);
   background: var(--icon-button-bg);
-  font-size: 20px;
   color: var(--icon-button-color);
   cursor: pointer;
   transition: all 0.25s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
 }
 
 .icon-button:hover:not(:disabled) {

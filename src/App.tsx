@@ -8,7 +8,7 @@ import TargetPanel from './components/TargetPanel';
 import LanguagePickerModal from './components/LanguagePickerModal';
 import ImagePreview from './components/ImagePreview';
 import SettingsModal from './components/SettingsModal';
-import TranslateIcon from './components/TranslateIcon';
+import { TranslateIcon } from './components/icons';
 import { Languages, LanguageMetadata } from './types/languages';
 import { uiLanguageOptions } from './i18n';
 import { useOCR } from './hooks/useOCR';
