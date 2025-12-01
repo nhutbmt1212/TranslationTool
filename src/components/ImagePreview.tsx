@@ -3,9 +3,10 @@ import React from 'react';
 interface ImagePreviewProps {
     imagePreview: string | null;
     isProcessingOCR: boolean;
+    countdown: number | null;
 }
 
-const ImagePreview: React.FC<ImagePreviewProps> = ({ imagePreview, isProcessingOCR }) => {
+const ImagePreview: React.FC<ImagePreviewProps> = ({ imagePreview, isProcessingOCR, countdown }) => {
     if (!imagePreview) return null;
 
     return (
@@ -15,6 +16,9 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ imagePreview, isProcessingO
                 <div className="ocr-progress-bar">
                     <div className="ocr-progress-indicator" />
                 </div>
+            )}
+            {countdown !== null && countdown > 0 && (
+                <div className="countdown-badge" />
             )}
         </div>
     );

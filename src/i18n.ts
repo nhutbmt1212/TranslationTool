@@ -70,6 +70,8 @@ const resources = {
           hint: 'Get your API key from Google AI Studio',
           getKey: 'Get API Key',
           saved: 'API key saved successfully!',
+          confirmClear: 'Are you sure you want to clear the API key?',
+          cleared: 'API key cleared successfully!',
         },
         errors: {
           emptyKey: 'API key cannot be empty',
@@ -159,6 +161,8 @@ const resources = {
           hint: 'Lấy khóa API từ Google AI Studio',
           getKey: 'Lấy khóa API',
           saved: 'Đã lưu khóa API thành công!',
+          confirmClear: 'Bạn có chắc chắn muốn xóa khóa API?',
+          cleared: 'Đã xóa khóa API thành công!',
         },
         errors: {
           emptyKey: 'Khóa API không được để trống',

@@ -90,7 +90,8 @@ const App: React.FC = () => {
     isProcessingOCR,
     imagePreview,
     setImagePreview,
-    processImage
+    processImage,
+    countdown
   } = useOCR();
 
   const {
@@ -345,7 +346,7 @@ const App: React.FC = () => {
             />
           </section>
 
-          <ImagePreview imagePreview={imagePreview} isProcessingOCR={isProcessingOCR} />
+          <ImagePreview imagePreview={imagePreview} isProcessingOCR={isProcessingOCR} countdown={countdown} />
 
           <section className="action-bar">
             <button

@@ -13,6 +13,7 @@ export const useOCR = () => {
     const { t } = useTranslation();
     const [isProcessingOCR, setIsProcessingOCR] = useState(false);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [countdown, setCountdown] = useState<number | null>(null);
 
     const convertFileToBase64 = (file: File): Promise<string> =>
         new Promise((resolve, reject) => {
@@ -115,6 +116,20 @@ export const useOCR = () => {
         }
     };
 
+    const startCountdown = () => {
+        setCountdown(4);
+        let remaining = 4;
+        const interval = setInterval(() => {
+            remaining -= 1;
+            setCountdown(remaining);
+            if (remaining <= 0) {
+                clearInterval(interval);
+                setImagePreview(null);
+                setCountdown(null);
+            }
+        }, 1000);
+    };
+
     const processImage = async (
         file: File,
         targetLang: string,
@@ -134,12 +149,15 @@ export const useOCR = () => {
 
             if (result.originalText) {
                 setImagePreview(null);
+                setCountdown(null);
                 onSuccess(result);
             } else {
                 toast.error(t('errors.noTextFoundInImage'));
+                startCountdown();
             }
         } catch (err) {
             toast.error(err instanceof Error ? err.message : t('errors.ocrFailure'));
+            startCountdown();
         } finally {
             setIsProcessingOCR(false);
         }
@@ -150,5 +168,6 @@ export const useOCR = () => {
         imagePreview,
         setImagePreview,
         processImage,
+        countdown,
     };
 };

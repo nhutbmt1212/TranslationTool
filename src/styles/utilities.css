@@ -87,6 +87,20 @@
   animation: progress-indeterminate 1.5s infinite linear;
 }
 
+.countdown-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 7px;
+  height: 7px;
+  background: rgba(239, 68, 68, 0.95);
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.6), 0 0 3px rgba(255, 255, 255, 0.3);
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  z-index: 10;
+  animation: slideIn 0.3s ease;
+}
+
 ::-webkit-scrollbar {
   width: 8px;
 }
