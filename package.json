@@ -1,6 +1,6 @@
 {
   "name": "dalit",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "DALIT - AI-powered translation platform",
   "main": "dist-electron/electron/main.js",
   "type": "module",
