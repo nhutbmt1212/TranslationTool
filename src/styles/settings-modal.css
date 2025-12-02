@@ -7,6 +7,7 @@
     flex: 1;
     min-height: 0;
     padding-right: 6px;
+    padding-bottom: 16px;
 }
 
 .settings-section {
@@ -247,7 +248,10 @@
 .settings-actions {
     display: flex;
     gap: 12px;
-    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--control-border);
+    margin-top: 0;
+    flex-shrink: 0;
 }
 
 .settings-save-button,
@@ -339,4 +343,160 @@
     .settings-cancel-button {
         width: 100%;
     }
+}
+
+/*
+ Settings Tabs */
+.settings-tabs {
+    display: flex;
+    gap: 8px;
+    padding: 0 0 16px 0;
+    border-bottom: 1px solid var(--control-border);
+    /* margin-bottom: 20px; */
+}
+
+.settings-tab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.settings-tab:hover {
+    background: var(--control-bg);
+    color: var(--text-primary);
+}
+
+.settings-tab.active {
+    background: var(--accent);
+    color: white;
+}
+
+.settings-tab svg {
+    flex-shrink: 0;
+}
+
+/* Update Section Styles */
+.update-info-box {
+    background: var(--control-bg);
+    border: 1px solid var(--control-border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.update-info-label {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.update-info-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-family: 'Courier New', monospace;
+}
+
+.update-error {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 14px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.update-available-box,
+.update-ready-box {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.update-ready-box {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%);
+    border-color: rgba(34, 197, 94, 0.3);
+}
+
+.update-available-icon,
+.update-ready-icon {
+    font-size: 28px;
+    flex-shrink: 0;
+}
+
+.update-available-text,
+.update-ready-text {
+    flex: 1;
+}
+
+.update-available-text strong,
+.update-ready-text strong {
+    display: block;
+    font-size: 15px;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.update-available-text p,
+.update-ready-text p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.update-progress-box {
+    background: var(--control-bg);
+    border: 1px solid var(--control-border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.update-progress-label {
+    font-size: 14px;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+    font-weight: 500;
+}
+
+.update-progress-bar {
+    width: 100%;
+    height: 8px;
+    background: var(--surface-primary);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.update-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent) 0%, #8b5cf6 100%);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.update-progress-text {
+    font-size: 13px;
+    color: var(--text-secondary);
+    text-align: right;
 }

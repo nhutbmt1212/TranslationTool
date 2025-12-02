@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   translate: (text: string, targetLang: string, sourceLang?: string) =>
     ipcRenderer.invoke('translate', text, targetLang, sourceLang),
   getLanguages: () => ipcRenderer.invoke('get-languages'),
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   
   // Auto-updater APIs
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),

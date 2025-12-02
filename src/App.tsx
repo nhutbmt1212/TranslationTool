@@ -8,7 +8,6 @@ import TargetPanel from './components/TargetPanel';
 import LanguagePickerModal from './components/LanguagePickerModal';
 import ImagePreview from './components/ImagePreview';
 import SettingsModal from './components/SettingsModal';
-import { UpdateNotification } from './components/UpdateNotification';
 import { TranslateIcon } from './components/icons';
 import { Languages, LanguageMetadata } from './types/languages';
 import { uiLanguageOptions } from './i18n';
@@ -43,6 +42,7 @@ declare global {
         error?: string;
       }>;
       getLanguages: () => Promise<Languages>;
+      getAppVersion: () => Promise<string>;
       checkForUpdates: () => Promise<{ success: boolean; data?: any; error?: string }>;
       downloadUpdate: () => Promise<{ success: boolean; error?: string }>;
       installUpdate: () => void;
@@ -318,7 +318,6 @@ const App: React.FC = () => {
 
   return (
     <div className="app-shell">
-      <UpdateNotification />
       <div className="orb orb-one" aria-hidden="true" />
       <div className="orb orb-two" aria-hidden="true" />
       <div className="grid-overlay" aria-hidden="true" />

@@ -38,19 +38,17 @@ async function deriveKey(passphrase: string, salt: Uint8Array): Promise<CryptoKe
 
 /**
  * Generate a device-specific passphrase
- * This creates a unique key based on browser/device characteristics
+ * Uses stable values that won't change between app sessions
  */
 function getDevicePassphrase(): string {
+    // Chỉ dùng các giá trị ổn định, không thay đổi
     const components = [
-        navigator.userAgent,
         navigator.language,
         new Date().getTimezoneOffset().toString(),
-        screen.width.toString(),
-        screen.height.toString(),
     ];
 
     // Add a constant salt to make it harder to reverse engineer
-    const salt = 'TranslateTool-v1-2025';
+    const salt = 'TranslateTool-v1-2025-stable';
     return components.join('|') + '|' + salt;
 }
 

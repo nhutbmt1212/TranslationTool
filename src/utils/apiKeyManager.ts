@@ -6,6 +6,7 @@
 import { encrypt, decrypt } from './crypto';
 
 const STORAGE_KEY = 'gemini_api_key_encrypted';
+const STORAGE_KEY_V2 = 'gemini_api_key_v2'; // Key mới với passphrase ổn định
 
 export class ApiKeyManager {
     private static cachedKey: string | null = null;
@@ -20,7 +21,10 @@ export class ApiKeyManager {
 
         try {
             const encrypted = await encrypt(apiKey.trim());
-            localStorage.setItem(STORAGE_KEY, encrypted);
+            // Lưu vào key mới (v2)
+            localStorage.setItem(STORAGE_KEY_V2, encrypted);
+            // Xóa key cũ nếu có
+            localStorage.removeItem(STORAGE_KEY);
             this.cachedKey = apiKey.trim();
         } catch (error) {
             console.error('Failed to save API key:', error);
@@ -39,18 +43,31 @@ export class ApiKeyManager {
         }
 
         try {
-            const encrypted = localStorage.getItem(STORAGE_KEY);
+            // Thử đọc từ key mới (v2) trước
+            let encrypted = localStorage.getItem(STORAGE_KEY_V2);
+            
+            // Nếu không có, thử đọc từ key cũ
+            if (!encrypted) {
+                encrypted = localStorage.getItem(STORAGE_KEY);
+            }
+            
             if (!encrypted) {
                 return null;
             }
 
             const decrypted = await decrypt(encrypted);
             this.cachedKey = decrypted;
+            
+            // Nếu đọc từ key cũ thành công, migrate sang key mới
+            if (!localStorage.getItem(STORAGE_KEY_V2) && localStorage.getItem(STORAGE_KEY)) {
+                await this.saveApiKey(decrypted);
+            }
+            
             return decrypted;
         } catch (error) {
             console.error('Failed to retrieve API key:', error);
-            // Clear corrupted data
-            this.clearApiKey();
+            // Không tự động xóa key nữa, chỉ log lỗi
+            // User có thể nhập lại key mới nếu cần
             return null;
         }
     }
@@ -59,7 +76,9 @@ export class ApiKeyManager {
      * Check if API key exists
      */
     static hasApiKey(): boolean {
-        return localStorage.getItem(STORAGE_KEY) !== null || this.cachedKey !== null;
+        return localStorage.getItem(STORAGE_KEY_V2) !== null || 
+               localStorage.getItem(STORAGE_KEY) !== null || 
+               this.cachedKey !== null;
     }
 
     /**
@@ -67,6 +86,7 @@ export class ApiKeyManager {
      */
     static clearApiKey(): void {
         localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(STORAGE_KEY_V2);
         this.cachedKey = null;
     }
 

@@ -144,8 +144,20 @@ ipcMain.handle('get-languages', async () => {
   return translator.getSupportedLanguages();
 });
 
+ipcMain.handle('get-app-version', () => {
+  return app.getVersion();
+});
+
 // Auto-updater IPC handlers
 ipcMain.handle('check-for-updates', async () => {
+  // Kiểm tra nếu đang ở dev mode
+  if (!app.isPackaged) {
+    return {
+      success: false,
+      error: 'Auto-update chỉ hoạt động trong production build',
+    };
+  }
+
   try {
     const result = await autoUpdater.checkForUpdates();
     return { success: true, data: result };
