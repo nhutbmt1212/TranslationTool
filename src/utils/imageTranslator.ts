@@ -16,6 +16,7 @@ interface TextRegion {
     topRight: Point;
     bottomRight: Point;
     bottomLeft: Point;
+    fontSize: number; // Estimated font size from original text
 }
 
 interface TranslationResult {
@@ -57,19 +58,10 @@ async function detectTextWithTesseract(imageFile: File): Promise<TextRegion[]> {
     const imageUrl = URL.createObjectURL(imageFile);
     
     try {
-        console.log('Starting Tesseract OCR...');
-        
         // Create worker
-        const worker = await createWorker('eng', 1, {
-            logger: (m: { status: string; progress: number }) => {
-                if (m.status === 'recognizing text') {
-                    console.log(`OCR Progress: ${Math.round(m.progress * 100)}%`);
-                }
-            },
-        });
+        const worker = await createWorker('eng', 1);
 
         const result = await worker.recognize(imageUrl);
-        console.log('Tesseract result:', result);
 
         // Extract line-level bounding boxes
         const regions: TextRegion[] = [];
@@ -79,6 +71,11 @@ async function detectTextWithTesseract(imageFile: File): Promise<TextRegion[]> {
             data.lines.forEach((line: any) => {
                 if (line.text.trim() && line.confidence > 30) {
                     const bbox = line.bbox;
+                    const lineHeight = bbox.y1 - bbox.y0;
+                    
+                    // Estimate font size from line height (typically ~80% of line height)
+                    const estimatedFontSize = Math.round(lineHeight * 0.85);
+                    
                     regions.push({
                         text: line.text.trim(),
                         translatedText: '', // Will be filled by Gemini
@@ -86,13 +83,13 @@ async function detectTextWithTesseract(imageFile: File): Promise<TextRegion[]> {
                         topRight: { x: bbox.x1, y: bbox.y0 },
                         bottomRight: { x: bbox.x1, y: bbox.y1 },
                         bottomLeft: { x: bbox.x0, y: bbox.y1 },
+                        fontSize: estimatedFontSize,
                     });
                 }
             });
         }
 
         await worker.terminate();
-        console.log(`Detected ${regions.length} text regions`);
         return regions;
     } finally {
         URL.revokeObjectURL(imageUrl);
@@ -151,7 +148,6 @@ async function readAndTranslateWithGemini(
     if (!apiKey) throw new Error('API key not found');
 
     // Crop all regions
-    console.log('Cropping regions for Gemini...');
     const croppedImages = await Promise.all(
         regions.map(region => cropRegion(imageFile, region))
     );
@@ -200,8 +196,6 @@ Important:
     const textContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!textContent) throw new Error('No response from Gemini');
 
-    console.log('Gemini response:', textContent);
-
     const jsonMatch = textContent.match(/\[[\s\S]*\]/);
     if (!jsonMatch) throw new Error('Invalid translation response');
 
@@ -225,7 +219,6 @@ export async function detectAndTranslateText(
         }
 
         // Step 1: Detect text with Tesseract.js
-        console.log('Detecting text with Tesseract.js...');
         const regions = await detectTextWithTesseract(imageFile);
 
         if (regions.length === 0) {
@@ -233,10 +226,7 @@ export async function detectAndTranslateText(
         }
 
         // Step 2: Send cropped regions to Gemini for accurate OCR + translation
-        console.log('Sending cropped regions to Gemini for OCR + translation...');
-        
         const translations = await readAndTranslateWithGemini(imageFile, regions, sourceLang, targetLang);
-        console.log('Translations:', translations);
 
         // Step 3: Combine bbox + translations
         regions.forEach((region, i) => {
@@ -245,7 +235,6 @@ export async function detectAndTranslateText(
 
         return { success: true, regions };
     } catch (error) {
-        console.error('Detection/Translation error:', error);
         return {
             success: false,
             error: error instanceof Error ? error.message : 'Unknown error',
@@ -324,8 +313,12 @@ export async function replaceTextInImage(
             ctx.drawImage(img, 0, 0);
 
             regions.forEach((region) => {
+                // Calculate dimensions
+                const boxHeight = Math.abs(region.bottomLeft.y - region.topLeft.y);
+                const boxWidth = Math.abs(region.topRight.x - region.topLeft.x);
+                
                 // Draw white background
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+                ctx.fillStyle = 'rgba(255, 255, 255, 1)';
                 ctx.beginPath();
                 ctx.moveTo(region.topLeft.x, region.topLeft.y);
                 ctx.lineTo(region.topRight.x, region.topRight.y);
@@ -334,40 +327,65 @@ export async function replaceTextInImage(
                 ctx.closePath();
                 ctx.fill();
 
-                // Calculate dimensions
-                const boxHeight = Math.abs(region.bottomLeft.y - region.topLeft.y);
-                const boxWidth = Math.abs(region.topRight.x - region.topLeft.x);
-                const fontSize = Math.max(10, Math.floor(boxHeight * 0.7));
+                // Save context state for clipping
+                ctx.save();
+                
+                // Create clipping region to prevent text overflow
+                ctx.beginPath();
+                ctx.rect(region.topLeft.x, region.topLeft.y, boxWidth, boxHeight);
+                ctx.clip();
 
-                // Draw translated text
-                ctx.font = `${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif`;
+                // Start with original font size, then scale down if needed
+                let fontSize = Math.max(8, region.fontSize);
+                const fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif';
+                
+                // Function to calculate lines with word wrap
+                const calculateLines = (size: number): string[] => {
+                    ctx.font = `${size}px ${fontFamily}`;
+                    const words = region.translatedText.split(' ');
+                    const lines: string[] = [];
+                    let currentLine = '';
+
+                    words.forEach((word) => {
+                        const testLine = currentLine ? `${currentLine} ${word}` : word;
+                        if (ctx.measureText(testLine).width > boxWidth - 8 && currentLine) {
+                            lines.push(currentLine);
+                            currentLine = word;
+                        } else {
+                            currentLine = testLine;
+                        }
+                    });
+                    if (currentLine) lines.push(currentLine);
+                    return lines;
+                };
+
+                // Auto-scale font if text doesn't fit
+                let lines = calculateLines(fontSize);
+                while (lines.length * fontSize > boxHeight && fontSize > 8) {
+                    fontSize -= 1;
+                    lines = calculateLines(fontSize);
+                }
+
+                // Set final font
+                ctx.font = `${fontSize}px ${fontFamily}`;
                 ctx.fillStyle = '#1a1a1a';
                 ctx.textBaseline = 'middle';
                 ctx.textAlign = 'left';
 
-                // Word wrapping
-                const words = region.translatedText.split(' ');
-                const lines: string[] = [];
-                let currentLine = '';
-
-                words.forEach((word) => {
-                    const testLine = currentLine ? `${currentLine} ${word}` : word;
-                    if (ctx.measureText(testLine).width > boxWidth - 8 && currentLine) {
-                        lines.push(currentLine);
-                        currentLine = word;
-                    } else {
-                        currentLine = testLine;
-                    }
-                });
-                if (currentLine) lines.push(currentLine);
-
-                // Draw lines
+                // Draw lines centered vertically
                 const totalTextHeight = lines.length * fontSize;
-                let y = region.topLeft.y + (boxHeight - totalTextHeight) / 2 + fontSize / 2;
+                let y = region.topLeft.y + Math.max(0, (boxHeight - totalTextHeight) / 2) + fontSize / 2;
+                
                 lines.forEach((line) => {
-                    ctx.fillText(line, region.topLeft.x + 4, y);
+                    // Only draw if within box bounds
+                    if (y < region.bottomLeft.y) {
+                        ctx.fillText(line, region.topLeft.x + 2, y);
+                    }
                     y += fontSize;
                 });
+
+                // Restore context (removes clipping)
+                ctx.restore();
             });
 
             resolve(canvas.toDataURL('image/png'));

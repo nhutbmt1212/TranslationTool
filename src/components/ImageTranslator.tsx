@@ -57,10 +57,6 @@ const ImageTranslator: React.FC = () => {
                 return;
             }
 
-            // Log detected regions for debugging
-            console.log('Detected regions:', result.regions);
-            console.log('Image dimensions:', imageInfo.width, 'x', imageInfo.height);
-            
             toast.success(`Found ${result.regions.length} text region(s)`, { id: 'translate-image' });
 
             // Step 3: Replace text in image with translations
@@ -69,7 +65,6 @@ const ImageTranslator: React.FC = () => {
 
             toast.success('Translation complete!', { id: 'translate-image' });
         } catch (error) {
-            console.error('Translation error:', error);
             toast.error(
                 error instanceof Error ? error.message : 'Failed to translate image',
                 { id: 'translate-image' }
