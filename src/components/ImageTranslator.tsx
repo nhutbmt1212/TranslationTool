@@ -34,7 +34,7 @@ const ImageTranslator: React.FC = () => {
         toast.loading('Detecting and translating text...', { id: 'translate-image' });
 
         try {
-            // Step 1: Convert image to base64
+            // Step 1: Convert image to base64 (no resizing for accuracy)
             const base64 = await imageToBase64(selectedFile);
 
             // Step 2: Detect and translate text using Gemini
@@ -52,7 +52,7 @@ const ImageTranslator: React.FC = () => {
 
             toast.success(`Found ${result.regions.length} text region(s)`, { id: 'translate-image' });
 
-            // Step 3: Replace text in image
+            // Step 3: Replace text in image (coordinates are already accurate)
             const newImage = await replaceTextInImage(selectedFile, result.regions);
             setTranslatedImage(newImage);
 

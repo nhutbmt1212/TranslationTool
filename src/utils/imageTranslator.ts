@@ -5,11 +5,11 @@ const GEMINI_MODEL = 'gemini-2.5-flash-lite';
 interface TextRegion {
     text: string;
     translatedText: string;
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    fontSize: number;
+    // 4 corners: top-left, top-right, bottom-right, bottom-left
+    topLeft: { x: number; y: number };
+    topRight: { x: number; y: number };
+    bottomRight: { x: number; y: number };
+    bottomLeft: { x: number; y: number };
 }
 
 interface TranslationResult {
@@ -19,54 +19,18 @@ interface TranslationResult {
 }
 
 /**
- * Compress and convert image to base64
- * Max size: 1024x1024 to reduce API payload
+ * Convert image to base64 without resizing
+ * Keep original dimensions for accurate coordinate detection
  */
 export async function imageToBase64(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
-        const img = new Image();
         const reader = new FileReader();
 
         reader.onload = (e) => {
-            img.src = e.target?.result as string;
-        };
-
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-
-            if (!ctx) {
-                reject(new Error('Canvas not supported'));
-                return;
-            }
-
-            // Calculate new dimensions (max 1024px)
-            const maxSize = 1024;
-            let width = img.width;
-            let height = img.height;
-
-            if (width > maxSize || height > maxSize) {
-                if (width > height) {
-                    height = (height / width) * maxSize;
-                    width = maxSize;
-                } else {
-                    width = (width / height) * maxSize;
-                    height = maxSize;
-                }
-            }
-
-            canvas.width = width;
-            canvas.height = height;
-
-            // Draw compressed image
-            ctx.drawImage(img, 0, 0, width, height);
-
-            // Convert to base64 with quality 0.8
-            const base64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+            const base64 = (e.target?.result as string).split(',')[1];
             resolve(base64);
         };
 
-        img.onerror = () => reject(new Error('Failed to load image'));
         reader.onerror = () => reject(new Error('Failed to read file'));
         reader.readAsDataURL(file);
     });
@@ -90,37 +54,45 @@ export async function detectAndTranslateText(
         };
     }
 
-    const prompt = `You are an expert OCR and translation system. Analyze this image carefully and:
+    const prompt = `You are an expert OCR system with PIXEL-PERFECT accuracy. Your task:
 
-1. Detect ALL text regions in the image
-2. For each text region, provide EXACT bounding box coordinates in pixels from the top-left corner
-3. Translate text from ${sourceLang} to ${targetLang}
-4. Estimate font size based on the height of the text
+1. DETECT every text region in this image
+2. TRANSLATE from ${sourceLang} to ${targetLang}
+3. Return EXACT pixel coordinates for bounding boxes
 
-CRITICAL: Coordinates must be EXACT pixel positions where:
-- x: distance from LEFT edge of image to LEFT edge of text
-- y: distance from TOP edge of image to TOP edge of text  
-- width: horizontal width of the text region
-- height: vertical height of the text region
+⚠️ ACCURACY IS CRITICAL ⚠️
+- Measure coordinates with MAXIMUM PRECISION
+- Use the ACTUAL pixel positions you see in the image
+- Double-check every coordinate before returning
+- The bounding box must PERFECTLY cover the text (not too small, not too large)
 
-Return ONLY a valid JSON array (no markdown, no code blocks):
+📐 COORDINATE RULES:
+- Image origin (0,0) is at TOP-LEFT corner
+- X increases LEFT → RIGHT
+- Y increases TOP → BOTTOM
+- All coordinates must be INTEGERS (whole numbers)
+- Provide 4 corners: topLeft, topRight, bottomRight, bottomLeft (clockwise order)
+
+📝 TEXT DETECTION RULES:
+- Detect ALL text (titles, labels, body text, small text, everything)
+- Each separate text block = separate region
+- Don't merge text from different lines or sections
+- Measure TIGHT bounding boxes (minimal padding)
+
+🎯 OUTPUT FORMAT (PURE JSON, NO MARKDOWN):
 [
   {
-    "text": "original text here",
-    "translatedText": "translated text here",
-    "x": 50,
-    "y": 100,
-    "width": 200,
-    "height": 25,
-    "fontSize": 18
+    "text": "exact original text",
+    "translatedText": "exact translation",
+    "topLeft": {"x": 100, "y": 50},
+    "topRight": {"x": 300, "y": 50},
+    "bottomRight": {"x": 300, "y": 80},
+    "bottomLeft": {"x": 100, "y": 80}
   }
 ]
 
-Rules:
-- Return ONLY the JSON array
-- All coordinates must be integers in pixels
-- fontSize should be approximately 70-80% of height
-- If no text found, return []`;
+⚠️ CRITICAL: Return ONLY the JSON array. NO markdown blocks, NO explanations, NO extra text.
+Return [] if no text is found.`;
 
     // Retry logic for 503 errors
     let lastError: Error | null = null;
@@ -173,10 +145,17 @@ Rules:
                 throw new Error('No response from Gemini');
             }
 
-            // Parse JSON from response
-            const jsonMatch = textContent.match(/\[[\s\S]*\]/);
+            // Parse JSON from response (handle markdown code blocks)
+            let jsonText = textContent.trim();
+            
+            // Remove markdown code blocks if present
+            jsonText = jsonText.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+            
+            // Extract JSON array
+            const jsonMatch = jsonText.match(/\[[\s\S]*\]/);
             if (!jsonMatch) {
-                throw new Error('Invalid JSON response');
+                console.error('Failed to parse response:', textContent);
+                throw new Error('Invalid JSON response from Gemini');
             }
 
             const regions: TextRegion[] = JSON.parse(jsonMatch[0]);
@@ -237,30 +216,62 @@ export async function replaceTextInImage(
 
             // Process each text region
             regions.forEach((region) => {
-                // Add padding to background for better coverage
-                const padding = 2;
-                const bgX = Math.max(0, region.x - padding);
-                const bgY = Math.max(0, region.y - padding);
-                const bgWidth = Math.min(canvas.width - bgX, region.width + padding * 2);
-                const bgHeight = Math.min(canvas.height - bgY, region.height + padding * 2);
+                // Use coordinates directly (no scaling needed)
+                const topLeft = region.topLeft;
+                const topRight = region.topRight;
+                const bottomRight = region.bottomRight;
+                const bottomLeft = region.bottomLeft;
 
-                // Draw semi-transparent background to cover original text
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-                ctx.fillRect(bgX, bgY, bgWidth, bgHeight);
+                // Draw polygon background to cover original text
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+                ctx.beginPath();
+                ctx.moveTo(topLeft.x, topLeft.y);
+                ctx.lineTo(topRight.x, topRight.y);
+                ctx.lineTo(bottomRight.x, bottomRight.y);
+                ctx.lineTo(bottomLeft.x, bottomLeft.y);
+                ctx.closePath();
+                ctx.fill();
 
-                // Setup text style
-                const fontSize = Math.max(10, Math.floor(region.fontSize * 0.85));
-                ctx.font = `${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif`;
+                // Calculate bounding box dimensions
+                const boxHeight = Math.abs(bottomLeft.y - topLeft.y);
+                const boxWidth = Math.abs(topRight.x - topLeft.x);
+                
+                // Calculate optimal fontSize (60% of box height)
+                const fontSize = Math.max(10, Math.floor(boxHeight * 0.6));
+
+                // Setup text style with better font stack
+                ctx.font = `${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif`;
                 ctx.fillStyle = '#1a1a1a';
-                ctx.textBaseline = 'top'; // Align from top
-                ctx.textAlign = 'left'; // Align from left
+                ctx.textBaseline = 'middle';
+                ctx.textAlign = 'left';
 
-                // Draw text from top-left of region (no centering)
-                const textX = region.x;
-                const textY = region.y;
+                // Smart word wrapping
+                const words = region.translatedText.split(' ');
+                const lines: string[] = [];
+                let currentLine = '';
 
-                // Draw translated text
-                ctx.fillText(region.translatedText, textX, textY);
+                words.forEach((word) => {
+                    const testLine = currentLine ? `${currentLine} ${word}` : word;
+                    const metrics = ctx.measureText(testLine);
+                    
+                    if (metrics.width > boxWidth - 8 && currentLine) {
+                        lines.push(currentLine);
+                        currentLine = word;
+                    } else {
+                        currentLine = testLine;
+                    }
+                });
+                if (currentLine) lines.push(currentLine);
+
+                // Calculate starting Y position to center text vertically
+                const totalTextHeight = lines.length * fontSize;
+                let y = topLeft.y + (boxHeight - totalTextHeight) / 2 + fontSize / 2;
+
+                // Draw each line
+                lines.forEach((line) => {
+                    ctx.fillText(line, topLeft.x + 4, y);
+                    y += fontSize;
+                });
             });
 
             // Convert canvas to data URL
