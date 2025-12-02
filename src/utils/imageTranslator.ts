@@ -1,15 +1,21 @@
 import { ApiKeyManager } from './apiKeyManager';
+import { createWorker } from 'tesseract.js';
 
-const GEMINI_MODEL = 'gemini-2.5-flash-lite';
+// Gemini model for translation only
+const GEMINI_MODEL = 'gemini-2.0-flash';
+
+interface Point {
+    x: number;
+    y: number;
+}
 
 interface TextRegion {
     text: string;
     translatedText: string;
-    // 4 corners: top-left, top-right, bottom-right, bottom-left
-    topLeft: { x: number; y: number };
-    topRight: { x: number; y: number };
-    bottomRight: { x: number; y: number };
-    bottomLeft: { x: number; y: number };
+    topLeft: Point;
+    topRight: Point;
+    bottomRight: Point;
+    bottomLeft: Point;
 }
 
 interface TranslationResult {
@@ -18,175 +24,241 @@ interface TranslationResult {
     error?: string;
 }
 
+interface ImageInfo {
+    base64: string;
+    width: number;
+    height: number;
+}
+
 /**
- * Convert image to base64 without resizing
- * Keep original dimensions for accurate coordinate detection
+ * Convert image to base64 and return with dimensions
  */
-export async function imageToBase64(file: File): Promise<string> {
+export async function imageToBase64WithDimensions(file: File): Promise<ImageInfo> {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
-
         reader.onload = (e) => {
-            const base64 = (e.target?.result as string).split(',')[1];
-            resolve(base64);
+            const dataUrl = e.target?.result as string;
+            const base64 = dataUrl.split(',')[1];
+            const img = new Image();
+            img.onload = () => resolve({ base64, width: img.width, height: img.height });
+            img.onerror = () => reject(new Error('Failed to load image'));
+            img.src = dataUrl;
         };
-
         reader.onerror = () => reject(new Error('Failed to read file'));
         reader.readAsDataURL(file);
     });
 }
 
 /**
- * Call Gemini API to detect and translate text in image
+ * Detect text regions using Tesseract.js
+ * Returns line-level bounding boxes for accurate detection
  */
-export async function detectAndTranslateText(
-    imageBase64: string,
-    sourceLang: string = 'en',
-    targetLang: string = 'vi'
-): Promise<TranslationResult> {
-    const apiKey = await ApiKeyManager.getApiKey();
+async function detectTextWithTesseract(imageFile: File): Promise<TextRegion[]> {
+    const imageUrl = URL.createObjectURL(imageFile);
     
-    if (!apiKey) {
-        return {
-            success: false,
-            error: 'API key not found. Please configure in Settings.',
-            regions: [],
-        };
-    }
-
-    const prompt = `You are an expert OCR system with PIXEL-PERFECT accuracy. Your task:
-
-1. DETECT every text region in this image
-2. TRANSLATE from ${sourceLang} to ${targetLang}
-3. Return EXACT pixel coordinates for bounding boxes
-
-⚠️ ACCURACY IS CRITICAL ⚠️
-- Measure coordinates with MAXIMUM PRECISION
-- Use the ACTUAL pixel positions you see in the image
-- Double-check every coordinate before returning
-- The bounding box must PERFECTLY cover the text (not too small, not too large)
-
-📐 COORDINATE RULES:
-- Image origin (0,0) is at TOP-LEFT corner
-- X increases LEFT → RIGHT
-- Y increases TOP → BOTTOM
-- All coordinates must be INTEGERS (whole numbers)
-- Provide 4 corners: topLeft, topRight, bottomRight, bottomLeft (clockwise order)
-
-📝 TEXT DETECTION RULES:
-- Detect ALL text (titles, labels, body text, small text, everything)
-- Each separate text block = separate region
-- Don't merge text from different lines or sections
-- Measure TIGHT bounding boxes (minimal padding)
-
-🎯 OUTPUT FORMAT (PURE JSON, NO MARKDOWN):
-[
-  {
-    "text": "exact original text",
-    "translatedText": "exact translation",
-    "topLeft": {"x": 100, "y": 50},
-    "topRight": {"x": 300, "y": 50},
-    "bottomRight": {"x": 300, "y": 80},
-    "bottomLeft": {"x": 100, "y": 80}
-  }
-]
-
-⚠️ CRITICAL: Return ONLY the JSON array. NO markdown blocks, NO explanations, NO extra text.
-Return [] if no text is found.`;
-
-    // Retry logic for 503 errors
-    let lastError: Error | null = null;
-    const maxRetries = 3;
-
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-            const response = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
-                {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{
-                            parts: [
-                                { text: prompt },
-                                {
-                                    inline_data: {
-                                        mime_type: 'image/jpeg',
-                                        data: imageBase64,
-                                    },
-                                },
-                            ],
-                        }],
-                        generationConfig: {
-                            temperature: 0.1,
-                            maxOutputTokens: 2048,
-                        },
-                    }),
+    try {
+        console.log('Starting Tesseract OCR...');
+        
+        // Create worker
+        const worker = await createWorker('eng', 1, {
+            logger: (m: { status: string; progress: number }) => {
+                if (m.status === 'recognizing text') {
+                    console.log(`OCR Progress: ${Math.round(m.progress * 100)}%`);
                 }
-            );
+            },
+        });
 
-            if (!response.ok) {
-                const errorText = await response.text();
-                
-                // Retry on 503 (Service Unavailable)
-                if (response.status === 503 && attempt < maxRetries) {
-                    console.log(`Attempt ${attempt} failed with 503, retrying...`);
-                    await new Promise(resolve => setTimeout(resolve, 2000 * attempt)); // Exponential backoff
-                    continue;
+        const result = await worker.recognize(imageUrl);
+        console.log('Tesseract result:', result);
+
+        // Extract line-level bounding boxes
+        const regions: TextRegion[] = [];
+        const data = result.data as any;
+        
+        if (data.lines) {
+            data.lines.forEach((line: any) => {
+                if (line.text.trim() && line.confidence > 30) {
+                    const bbox = line.bbox;
+                    regions.push({
+                        text: line.text.trim(),
+                        translatedText: '', // Will be filled by Gemini
+                        topLeft: { x: bbox.x0, y: bbox.y0 },
+                        topRight: { x: bbox.x1, y: bbox.y0 },
+                        bottomRight: { x: bbox.x1, y: bbox.y1 },
+                        bottomLeft: { x: bbox.x0, y: bbox.y1 },
+                    });
                 }
-                
-                throw new Error(`API error ${response.status}: ${errorText}`);
-            }
-
-            const data = await response.json();
-            const textContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-            if (!textContent) {
-                throw new Error('No response from Gemini');
-            }
-
-            // Parse JSON from response (handle markdown code blocks)
-            let jsonText = textContent.trim();
-            
-            // Remove markdown code blocks if present
-            jsonText = jsonText.replace(/```json\s*/g, '').replace(/```\s*/g, '');
-            
-            // Extract JSON array
-            const jsonMatch = jsonText.match(/\[[\s\S]*\]/);
-            if (!jsonMatch) {
-                console.error('Failed to parse response:', textContent);
-                throw new Error('Invalid JSON response from Gemini');
-            }
-
-            const regions: TextRegion[] = JSON.parse(jsonMatch[0]);
-
-            return {
-                success: true,
-                regions,
-            };
-        } catch (error) {
-            lastError = error instanceof Error ? error : new Error('Unknown error');
-            
-            // Don't retry on non-503 errors
-            if (!lastError.message.includes('503')) {
-                break;
-            }
+            });
         }
-    }
 
-    // All retries failed
-    console.error('Translation error after retries:', lastError);
-    return {
-        success: false,
-        error: lastError?.message || 'Unknown error',
-        regions: [],
-    };
+        await worker.terminate();
+        console.log(`Detected ${regions.length} text regions`);
+        return regions;
+    } finally {
+        URL.revokeObjectURL(imageUrl);
+    }
+}
+
+
+/**
+ * Crop a region from image and return as base64
+ */
+async function cropRegion(
+    imageFile: File,
+    region: TextRegion,
+    padding: number = 5
+): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        const reader = new FileReader();
+
+        reader.onload = (e) => { img.src = e.target?.result as string; };
+        reader.onerror = () => reject(new Error('Failed to read file'));
+
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            if (!ctx) { reject(new Error('Canvas not supported')); return; }
+
+            // Calculate crop area with padding
+            const x = Math.max(0, region.topLeft.x - padding);
+            const y = Math.max(0, region.topLeft.y - padding);
+            const width = Math.min(img.width - x, region.topRight.x - region.topLeft.x + padding * 2);
+            const height = Math.min(img.height - y, region.bottomLeft.y - region.topLeft.y + padding * 2);
+
+            canvas.width = width;
+            canvas.height = height;
+            ctx.drawImage(img, x, y, width, height, 0, 0, width, height);
+
+            // Return base64 without data URL prefix
+            resolve(canvas.toDataURL('image/png').split(',')[1]);
+        };
+        img.onerror = () => reject(new Error('Failed to load image'));
+        reader.readAsDataURL(imageFile);
+    });
 }
 
 /**
- * Draw translated text on canvas with semi-transparent background
+ * Use Gemini to read text from cropped image regions and translate
  */
-export async function replaceTextInImage(
+async function readAndTranslateWithGemini(
+    imageFile: File,
+    regions: TextRegion[],
+    sourceLang: string,
+    targetLang: string
+): Promise<string[]> {
+    const apiKey = await ApiKeyManager.getApiKey();
+    if (!apiKey) throw new Error('API key not found');
+
+    // Crop all regions
+    console.log('Cropping regions for Gemini...');
+    const croppedImages = await Promise.all(
+        regions.map(region => cropRegion(imageFile, region))
+    );
+
+    // Build parts array with all cropped images
+    const imageParts = croppedImages.map((base64, i) => ({
+        inline_data: {
+            mime_type: 'image/png',
+            data: base64,
+        },
+        _index: i, // For reference
+    }));
+
+    const prompt = `You are given ${regions.length} cropped text images. For each image:
+1. Read the text accurately
+2. Translate from ${sourceLang} to ${targetLang}
+
+Return ONLY a JSON array with translations in order:
+["translation1", "translation2", ...]
+
+Important:
+- Return exactly ${regions.length} translations
+- Keep the same order as the images
+- If text is unclear, make your best guess`;
+
+    const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+        {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [
+                        { text: prompt },
+                        ...imageParts.map(p => ({ inline_data: p.inline_data })),
+                    ],
+                }],
+                generationConfig: { temperature: 0.1, maxOutputTokens: 4096 },
+            }),
+        }
+    );
+
+    if (!response.ok) throw new Error(`API error: ${response.status}`);
+
+    const data = await response.json();
+    const textContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!textContent) throw new Error('No response from Gemini');
+
+    console.log('Gemini response:', textContent);
+
+    const jsonMatch = textContent.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) throw new Error('Invalid translation response');
+
+    return JSON.parse(jsonMatch[0]);
+}
+
+/**
+ * Main function: Detect text with Tesseract + Translate with Gemini
+ */
+export async function detectAndTranslateText(
+    _imageBase64: string,
+    sourceLang: string = 'en',
+    targetLang: string = 'vi',
+    _imageWidth?: number,
+    _imageHeight?: number,
+    imageFile?: File
+): Promise<TranslationResult> {
+    try {
+        if (!imageFile) {
+            return { success: false, error: 'Image file required', regions: [] };
+        }
+
+        // Step 1: Detect text with Tesseract.js
+        console.log('Detecting text with Tesseract.js...');
+        const regions = await detectTextWithTesseract(imageFile);
+
+        if (regions.length === 0) {
+            return { success: true, regions: [] };
+        }
+
+        // Step 2: Send cropped regions to Gemini for accurate OCR + translation
+        console.log('Sending cropped regions to Gemini for OCR + translation...');
+        
+        const translations = await readAndTranslateWithGemini(imageFile, regions, sourceLang, targetLang);
+        console.log('Translations:', translations);
+
+        // Step 3: Combine bbox + translations
+        regions.forEach((region, i) => {
+            region.translatedText = translations[i] || region.text;
+        });
+
+        return { success: true, regions };
+    } catch (error) {
+        console.error('Detection/Translation error:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+            regions: [],
+        };
+    }
+}
+
+
+/**
+ * Draw white boxes over detected text regions (debug mode)
+ */
+export async function replaceTextWithBoxes(
     imageFile: File,
     regions: TextRegion[]
 ): Promise<string> {
@@ -194,67 +266,93 @@ export async function replaceTextInImage(
         const img = new Image();
         const reader = new FileReader();
 
-        reader.onload = (e) => {
-            img.src = e.target?.result as string;
-        };
+        reader.onload = (e) => { img.src = e.target?.result as string; };
+        reader.onerror = () => reject(new Error('Failed to read file'));
 
         img.onload = () => {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
+            if (!ctx) { reject(new Error('Canvas not supported')); return; }
 
-            if (!ctx) {
-                reject(new Error('Canvas not supported'));
-                return;
-            }
-
-            // Set canvas size to match image
             canvas.width = img.width;
             canvas.height = img.height;
-
-            // Draw original image
             ctx.drawImage(img, 0, 0);
 
-            // Process each text region
+            // Draw white boxes
             regions.forEach((region) => {
-                // Use coordinates directly (no scaling needed)
-                const topLeft = region.topLeft;
-                const topRight = region.topRight;
-                const bottomRight = region.bottomRight;
-                const bottomLeft = region.bottomLeft;
+                ctx.fillStyle = 'rgba(255, 255, 255, 1)';
+                ctx.beginPath();
+                ctx.moveTo(region.topLeft.x, region.topLeft.y);
+                ctx.lineTo(region.topRight.x, region.topRight.y);
+                ctx.lineTo(region.bottomRight.x, region.bottomRight.y);
+                ctx.lineTo(region.bottomLeft.x, region.bottomLeft.y);
+                ctx.closePath();
+                ctx.fill();
+            });
 
-                // Draw polygon background to cover original text
+            resolve(canvas.toDataURL('image/png'));
+        };
+        img.onerror = () => reject(new Error('Failed to load image'));
+        reader.readAsDataURL(imageFile);
+    });
+}
+
+/**
+ * Replace text in image with translations
+ */
+export async function replaceTextInImage(
+    imageFile: File,
+    regions: TextRegion[],
+    debugMode: boolean = false
+): Promise<string> {
+    if (debugMode) return replaceTextWithBoxes(imageFile, regions);
+
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        const reader = new FileReader();
+
+        reader.onload = (e) => { img.src = e.target?.result as string; };
+        reader.onerror = () => reject(new Error('Failed to read file'));
+
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            if (!ctx) { reject(new Error('Canvas not supported')); return; }
+
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+
+            regions.forEach((region) => {
+                // Draw white background
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
                 ctx.beginPath();
-                ctx.moveTo(topLeft.x, topLeft.y);
-                ctx.lineTo(topRight.x, topRight.y);
-                ctx.lineTo(bottomRight.x, bottomRight.y);
-                ctx.lineTo(bottomLeft.x, bottomLeft.y);
+                ctx.moveTo(region.topLeft.x, region.topLeft.y);
+                ctx.lineTo(region.topRight.x, region.topRight.y);
+                ctx.lineTo(region.bottomRight.x, region.bottomRight.y);
+                ctx.lineTo(region.bottomLeft.x, region.bottomLeft.y);
                 ctx.closePath();
                 ctx.fill();
 
-                // Calculate bounding box dimensions
-                const boxHeight = Math.abs(bottomLeft.y - topLeft.y);
-                const boxWidth = Math.abs(topRight.x - topLeft.x);
-                
-                // Calculate optimal fontSize (60% of box height)
-                const fontSize = Math.max(10, Math.floor(boxHeight * 0.6));
+                // Calculate dimensions
+                const boxHeight = Math.abs(region.bottomLeft.y - region.topLeft.y);
+                const boxWidth = Math.abs(region.topRight.x - region.topLeft.x);
+                const fontSize = Math.max(10, Math.floor(boxHeight * 0.7));
 
-                // Setup text style with better font stack
+                // Draw translated text
                 ctx.font = `${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif`;
                 ctx.fillStyle = '#1a1a1a';
                 ctx.textBaseline = 'middle';
                 ctx.textAlign = 'left';
 
-                // Smart word wrapping
+                // Word wrapping
                 const words = region.translatedText.split(' ');
                 const lines: string[] = [];
                 let currentLine = '';
 
                 words.forEach((word) => {
                     const testLine = currentLine ? `${currentLine} ${word}` : word;
-                    const metrics = ctx.measureText(testLine);
-                    
-                    if (metrics.width > boxWidth - 8 && currentLine) {
+                    if (ctx.measureText(testLine).width > boxWidth - 8 && currentLine) {
                         lines.push(currentLine);
                         currentLine = word;
                     } else {
@@ -263,30 +361,18 @@ export async function replaceTextInImage(
                 });
                 if (currentLine) lines.push(currentLine);
 
-                // Calculate starting Y position to center text vertically
+                // Draw lines
                 const totalTextHeight = lines.length * fontSize;
-                let y = topLeft.y + (boxHeight - totalTextHeight) / 2 + fontSize / 2;
-
-                // Draw each line
+                let y = region.topLeft.y + (boxHeight - totalTextHeight) / 2 + fontSize / 2;
                 lines.forEach((line) => {
-                    ctx.fillText(line, topLeft.x + 4, y);
+                    ctx.fillText(line, region.topLeft.x + 4, y);
                     y += fontSize;
                 });
             });
 
-            // Convert canvas to data URL
-            const resultImage = canvas.toDataURL('image/png');
-            resolve(resultImage);
+            resolve(canvas.toDataURL('image/png'));
         };
-
-        img.onerror = () => {
-            reject(new Error('Failed to load image'));
-        };
-
-        reader.onerror = () => {
-            reject(new Error('Failed to read file'));
-        };
-
+        img.onerror = () => reject(new Error('Failed to load image'));
         reader.readAsDataURL(imageFile);
     });
 }

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
-import { detectAndTranslateText, imageToBase64, replaceTextInImage } from '../utils/imageTranslator';
+import { detectAndTranslateText, imageToBase64WithDimensions, replaceTextInImage } from '../utils/imageTranslator';
 import '../styles/image-translator.css';
 
 const ImageTranslator: React.FC = () => {
@@ -34,11 +34,18 @@ const ImageTranslator: React.FC = () => {
         toast.loading('Detecting and translating text...', { id: 'translate-image' });
 
         try {
-            // Step 1: Convert image to base64 (no resizing for accuracy)
-            const base64 = await imageToBase64(selectedFile);
+            // Step 1: Convert image to base64 and get dimensions for accurate bbox
+            const imageInfo = await imageToBase64WithDimensions(selectedFile);
 
-            // Step 2: Detect and translate text using Gemini
-            const result = await detectAndTranslateText(base64, 'en', 'vi');
+            // Step 2: Detect text with Tesseract + translate with Gemini
+            const result = await detectAndTranslateText(
+                imageInfo.base64, 
+                'en', 
+                'vi',
+                imageInfo.width,
+                imageInfo.height,
+                selectedFile // Pass file for Tesseract OCR
+            );
 
             if (!result.success) {
                 throw new Error(result.error || 'Translation failed');
@@ -50,10 +57,14 @@ const ImageTranslator: React.FC = () => {
                 return;
             }
 
+            // Log detected regions for debugging
+            console.log('Detected regions:', result.regions);
+            console.log('Image dimensions:', imageInfo.width, 'x', imageInfo.height);
+            
             toast.success(`Found ${result.regions.length} text region(s)`, { id: 'translate-image' });
 
-            // Step 3: Replace text in image (coordinates are already accurate)
-            const newImage = await replaceTextInImage(selectedFile, result.regions);
+            // Step 3: Replace text in image with translations
+            const newImage = await replaceTextInImage(selectedFile, result.regions, false);
             setTranslatedImage(newImage);
 
             toast.success('Translation complete!', { id: 'translate-image' });
