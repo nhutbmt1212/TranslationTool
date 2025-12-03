@@ -173,6 +173,7 @@ const App: React.FC = () => {
               onInputTextChange={setInputText}
               onCopy={() => handleCopy(inputText, 'source')}
               onOpenLanguagePicker={() => openLanguagePicker('source')}
+              onTranslate={() => handleTranslate(inputText)}
               sourceLabel={sourceLabel}
               copied={copyState.source}
             />

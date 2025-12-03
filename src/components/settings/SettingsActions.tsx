@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 
-type TabType = 'apiKey' | 'update';
+type TabType = 'apiKey' | 'update' | 'shortcuts';
 
 interface UpdateInfo {
   version: string;
@@ -71,7 +71,22 @@ const SettingsActions: React.FC<SettingsActionsProps> = ({
           onClick={onClose}
           disabled={isLoading}
         >
-          {t('settings.cancel') || 'Cancel'}
+          {t('settings.close') || 'Close'}
+        </button>
+      </div>
+    );
+  }
+
+  if (activeTab === 'shortcuts') {
+    return (
+      <div className="settings-actions">
+        <button
+          type="button"
+          className="settings-cancel-button"
+          onClick={onClose}
+          style={{ flex: 1 }}
+        >
+          {t('settings.close') || 'Close'}
         </button>
       </div>
     );
@@ -135,7 +150,7 @@ const SettingsActions: React.FC<SettingsActionsProps> = ({
         className="settings-cancel-button"
         onClick={onClose}
       >
-        {t('settings.cancel') || 'Close'}
+        {t('settings.close') || 'Close'}
       </button>
     </div>
   );

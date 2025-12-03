@@ -4,6 +4,7 @@ import { useUpdateSettings } from '../hooks/useUpdateSettings';
 import SettingsModalHeader from './settings/SettingsModalHeader';
 import ApiKeySection from './settings/ApiKeySection';
 import UpdateSection from './settings/UpdateSection';
+import ShortcutsSection from './settings/ShortcutsSection';
 import SettingsActions from './settings/SettingsActions';
 import '../styles/modal.css';
 import '../styles/settings-modal.css';
@@ -13,7 +14,7 @@ interface SettingsModalProps {
   onClose: () => void;
 }
 
-type TabType = 'apiKey' | 'update';
+type TabType = 'apiKey' | 'update' | 'shortcuts';
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) => {
   const [activeTab, setActiveTab] = useState<TabType>('apiKey');
@@ -105,6 +106,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) => {
               onCancelDownload={handleCancelDownload}
             />
           )}
+
+          {activeTab === 'shortcuts' && <ShortcutsSection />}
         </div>
 
         {/* Actions - Always at bottom */}

@@ -11,6 +11,7 @@ interface SourcePanelProps {
   onInputTextChange: (text: string) => void;
   onCopy: () => void;
   onOpenLanguagePicker: () => void;
+  onTranslate?: () => void;
   sourceLabel: string;
   copied: boolean;
 }
@@ -23,6 +24,7 @@ const SourcePanel: React.FC<SourcePanelProps> = ({
   onInputTextChange,
   onCopy,
   onOpenLanguagePicker,
+  onTranslate,
   sourceLabel,
   copied,
 }) => {
@@ -32,6 +34,16 @@ const SourcePanel: React.FC<SourcePanelProps> = ({
   const handleSpeak = useCallback(async () => {
     await triggerTTS(inputText, sourceLang, detectedLang);
   }, [triggerTTS, inputText, sourceLang, detectedLang]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.ctrlKey && e.key === 'Enter' && onTranslate) {
+        e.preventDefault();
+        onTranslate();
+      }
+    },
+    [onTranslate]
+  );
 
   return (
     <div className="translation-box source-box">
@@ -50,6 +62,7 @@ const SourcePanel: React.FC<SourcePanelProps> = ({
         placeholder={t('source.placeholder') ?? ''}
         value={inputText}
         onChange={(e) => onInputTextChange(e.target.value)}
+        onKeyDown={handleKeyDown}
         rows={8}
         spellCheck={false}
       />
