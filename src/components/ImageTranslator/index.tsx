@@ -3,7 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { useImageTranslation } from '../../hooks/useImageTranslation';
 import ImageUploadZone from './ImageUploadZone';
 import ImageComparisonView from './ImageComparisonView';
+import ScreenCapture from '../ScreenCapture';
 import '../../styles/image-translator.css';
+import '../../styles/screen-capture.css';
 
 const ImageTranslator: React.FC = () => {
   const { t } = useTranslation();
@@ -19,6 +21,14 @@ const ImageTranslator: React.FC = () => {
   } = useImageTranslation();
 
   const handleTranslate = () => handleProcess('en', 'vi');
+
+  const handleScreenCapture = (imageBuffer: Buffer) => {
+    // Convert buffer to blob and create file
+    const uint8Array = new Uint8Array(imageBuffer);
+    const blob = new Blob([uint8Array], { type: 'image/png' });
+    const file = new File([blob], 'screen-capture.png', { type: 'image/png' });
+    handleImageSelect(file);
+  };
 
   return (
     <>
@@ -59,7 +69,15 @@ const ImageTranslator: React.FC = () => {
 
             <div className="image-translator-content">
               {!selectedImage ? (
-                <ImageUploadZone onFileSelect={handleImageSelect} />
+                <div>
+                  <ImageUploadZone onFileSelect={handleImageSelect} />
+                  <div className="screen-capture-section">
+                    <div className="divider">
+                      <span>{t('imageTranslator.or')}</span>
+                    </div>
+                    <ScreenCapture onImageCaptured={handleScreenCapture} />
+                  </div>
+                </div>
               ) : (
                 <ImageComparisonView
                   originalImage={selectedImage}

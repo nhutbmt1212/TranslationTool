@@ -37,5 +37,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('update-downloaded', (_event, info) => callback(info));
     return () => ipcRenderer.removeListener('update-downloaded', callback);
   },
+
+  // Screen Capture APIs
+  screenCapture: {
+    getSize: () => ipcRenderer.invoke('screen-capture:get-size'),
+    captureFullScreen: () => ipcRenderer.invoke('screen-capture:capture-full-screen'),
+    captureRegion: (region: { x: number; y: number; width: number; height: number }) =>
+      ipcRenderer.invoke('screen-capture:capture-region', region),
+    selectDesktopRegion: () => ipcRenderer.invoke('screen-capture:select-desktop-region'),
+  },
+
+  // Overlay result (for overlay window)
+  overlayResult: (result: any) => ipcRenderer.send('overlay-result', result),
 });
 

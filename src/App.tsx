@@ -9,11 +9,13 @@ import LanguagePickerModal from './components/LanguagePickerModal';
 import ImagePreview from './components/ImagePreview';
 import SettingsModal from './components/SettingsModal';
 import ImageTranslator from './components/ImageTranslator';
+import QuickScreenCapture from './components/QuickScreenCapture';
 import { TranslateIcon } from './components/icons';
 import { Languages, LanguageMetadata } from './types/languages';
 import { uiLanguageOptions } from './i18n';
 import { useOCR } from './hooks/useOCR';
 import { useTranslationLogic } from './hooks/useTranslationLogic';
+import './styles/screen-capture.css';
 
 interface TranslationResult {
   text: string;
@@ -53,6 +55,14 @@ declare global {
       onUpdateError: (callback: (error: any) => void) => () => void;
       onUpdateDownloadProgress: (callback: (progress: any) => void) => () => void;
       onUpdateDownloaded: (callback: (info: any) => void) => () => void;
+      
+      // Screen Capture APIs
+      screenCapture?: {
+        getSize: () => Promise<{ width: number; height: number }>;
+        captureFullScreen: () => Promise<Buffer>;
+        captureRegion: (region: { x: number; y: number; width: number; height: number }) => Promise<Buffer>;
+        selectDesktopRegion: () => Promise<Buffer | null>;
+      };
     };
   }
 }
@@ -179,7 +189,6 @@ const App: React.FC = () => {
           setLanguages(fallbackLanguages);
         }
       } catch (err) {
-        console.error('Unable to load language list', err);
         setLanguages(fallbackLanguages);
       }
     };
@@ -360,6 +369,15 @@ const App: React.FC = () => {
               >
                 ⇆
               </button>
+              
+              <QuickScreenCapture
+                onImageCaptured={(text) => {
+                  setInputText(text);
+                  // Auto translate after capturing
+                  handleTranslate(text, text);
+                }}
+                disabled={isTranslating || isProcessingOCR}
+              />
             </div>
 
             <TargetPanel
