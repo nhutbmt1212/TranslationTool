@@ -43,6 +43,18 @@ export interface ElectronAPI {
   
   // Tray event listeners
   onTriggerScreenCapture: (callback: () => void) => () => void;
+
+  // Text Selection Popup APIs
+  textSelectionPopup: {
+    showPopup: () => Promise<void>;
+    hidePopup: () => Promise<void>;
+    startMonitoring: () => Promise<void>;
+    stopMonitoring: () => Promise<void>;
+    onPopupClick: () => void;
+  };
+
+  // Text selection translate event listener
+  onTextSelectionTranslate: (callback: (text: string) => void) => () => void;
 }
 
 declare global {

@@ -8,6 +8,7 @@ import { setupAutoUpdater, checkForUpdatesOnStartup, registerAutoUpdaterIPC } fr
 import { registerScreenCaptureIPC } from './lib/screenCapture.js';
 import { registerCoreIPC } from './lib/ipcHandlers.js';
 import { registerGlobalShortcuts, unregisterAllShortcuts } from './lib/shortcuts.js';
+import { registerTextSelectionIPC } from './lib/textSelectionPopup.js';
 
 // Initialize auto-updater
 setupAutoUpdater();
@@ -21,6 +22,7 @@ app.whenReady().then(() => {
   registerCoreIPC();
   registerAutoUpdaterIPC();
   registerScreenCaptureIPC();
+  registerTextSelectionIPC();
   
   // Register global shortcuts
   registerGlobalShortcuts();

@@ -105,6 +105,18 @@ const App: React.FC = () => {
     if (inputText.trim() === '') setOutputText('');
   }, [inputText]);
 
+  // Listen for text selection translate event from popup
+  useEffect(() => {
+    const cleanup = window.electronAPI?.onTextSelectionTranslate?.((text: string) => {
+      if (text && text.trim()) {
+        setInputText(text);
+        // Auto translate after setting text
+        handleTranslate(text, text);
+      }
+    });
+    return () => cleanup?.();
+  }, [handleTranslate]);
+
   // Handlers
   const openLanguagePicker = (mode: 'source' | 'target') => {
     setLanguagePickerMode(mode);

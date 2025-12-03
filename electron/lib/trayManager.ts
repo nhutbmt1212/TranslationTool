@@ -1,6 +1,12 @@
 import { Tray, Menu, nativeImage, app } from 'electron';
 import { PATHS } from './constants.js';
 import { getMainWindow, setQuitting } from './windowManager.js';
+import {
+  showPopupAtCursor,
+  startSelectionMonitoring,
+  stopSelectionMonitoring,
+  isMonitoringActive,
+} from './textSelectionPopup.js';
 
 let tray: Tray | null = null;
 
@@ -39,6 +45,26 @@ export function createTray(): Tray {
       click: () => {
         const mainWindow = getMainWindow();
         mainWindow?.webContents.send('trigger-screen-capture');
+      },
+    },
+    {
+      label: 'Quick Translate (Ctrl+Shift+C)',
+      accelerator: 'CommandOrControl+Shift+C',
+      click: () => {
+        showPopupAtCursor();
+      },
+    },
+    { type: 'separator' },
+    {
+      label: 'Auto Translate on Copy',
+      type: 'checkbox',
+      checked: true,
+      click: (menuItem) => {
+        if (menuItem.checked) {
+          startSelectionMonitoring();
+        } else {
+          stopSelectionMonitoring();
+        }
       },
     },
     { type: 'separator' },
