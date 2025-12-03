@@ -54,12 +54,13 @@ export const useUpdateNotification = (): UseUpdateNotificationReturn => {
       setError(null);
     });
 
-    const removeAvailable = window.electronAPI.onUpdateAvailable?.((info: UpdateInfo) => {
+    const removeAvailable = window.electronAPI.onUpdateAvailable?.((info) => {
+      const updateData = info as UpdateInfo;
       setUpdateAvailable(true);
-      setUpdateInfo(info);
+      setUpdateInfo(updateData);
       toast.success(
         t('update.notification.newVersionAvailable', 'New version {{version}} is available!', {
-          version: info.version,
+          version: updateData.version,
         }),
         { duration: 5000 }
       );
@@ -69,16 +70,17 @@ export const useUpdateNotification = (): UseUpdateNotificationReturn => {
       // No update available - silent
     });
 
-    const removeError = window.electronAPI.onUpdateError?.((errorInfo: any) => {
+    const removeError = window.electronAPI.onUpdateError?.(() => {
       const errorMessage = t('update.notification.checkError', 'Error checking for updates');
       setError(errorMessage);
       toast.error(errorMessage);
       setDownloading(false);
     });
 
-    const removeProgress = window.electronAPI.onUpdateDownloadProgress?.((progress: DownloadProgress) => {
+    const removeProgress = window.electronAPI.onUpdateDownloadProgress?.((progress) => {
+      const progressData = progress as DownloadProgress;
       if (!isPaused) {
-        setDownloadProgress(Math.round(progress.percent));
+        setDownloadProgress(Math.round(progressData.percent));
       }
     });
 

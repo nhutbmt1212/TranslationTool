@@ -65,10 +65,11 @@ export const useUpdateSettings = (): UseUpdateSettingsReturn => {
       setUpdateError(null);
     });
 
-    const removeAvailable = window.electronAPI.onUpdateAvailable?.((info: UpdateInfo) => {
+    const removeAvailable = window.electronAPI.onUpdateAvailable?.((info) => {
+      const updateData = info as UpdateInfo;
       setCheckingUpdate(false);
       setUpdateAvailable(true);
-      setUpdateInfo(info);
+      setUpdateInfo(updateData);
     });
 
     const removeNotAvailable = window.electronAPI.onUpdateNotAvailable?.(() => {
@@ -77,14 +78,16 @@ export const useUpdateSettings = (): UseUpdateSettingsReturn => {
       toast.success('You are using the latest version');
     });
 
-    const removeError = window.electronAPI.onUpdateError?.((error: any) => {
+    const removeError = window.electronAPI.onUpdateError?.((error) => {
+      const errorData = error as { message?: string } | null;
       setCheckingUpdate(false);
       setDownloading(false);
-      setUpdateError(error?.message || 'Update check failed');
+      setUpdateError(errorData?.message || 'Update check failed');
     });
 
-    const removeProgress = window.electronAPI.onUpdateDownloadProgress?.((progress: DownloadProgress) => {
-      setDownloadProgress(Math.round(progress.percent));
+    const removeProgress = window.electronAPI.onUpdateDownloadProgress?.((progress) => {
+      const progressData = progress as DownloadProgress;
+      setDownloadProgress(Math.round(progressData.percent));
     });
 
     const removeDownloaded = window.electronAPI.onUpdateDownloaded?.(() => {

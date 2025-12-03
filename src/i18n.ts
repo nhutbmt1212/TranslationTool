@@ -61,6 +61,7 @@ const resources = {
         feature1: 'Detect text in image',
         feature2: 'Translate to target language',
         feature3: 'Replace text in original image',
+        or: 'OR',
       },
       languagePicker: {
         titleSource: 'Select source language',
@@ -218,6 +219,7 @@ const resources = {
         feature1: 'Phát hiện văn bản trong ảnh',
         feature2: 'Dịch sang ngôn ngữ đích',
         feature3: 'Thay thế văn bản trong ảnh gốc',
+        or: 'HOẶC',
       },
       languagePicker: {
         titleSource: 'Chọn ngôn ngữ nguồn',
