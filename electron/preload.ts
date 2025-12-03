@@ -60,5 +60,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('trigger-screen-capture', callback);
     return () => ipcRenderer.removeListener('trigger-screen-capture', callback);
   },
+
+  // Text Selection Popup APIs
+  textSelectionPopup: {
+    showPopup: () => ipcRenderer.invoke('text-selection:show-popup'),
+    hidePopup: () => ipcRenderer.invoke('text-selection:hide-popup'),
+    startMonitoring: () => ipcRenderer.invoke('text-selection:start-monitoring'),
+    stopMonitoring: () => ipcRenderer.invoke('text-selection:stop-monitoring'),
+    isMonitoring: () => ipcRenderer.invoke('text-selection:is-monitoring'),
+    onPopupClick: () => ipcRenderer.send('text-selection:popup-click'),
+    
+  },
+
+  // Listen for text selection translate event
+  onTextSelectionTranslate: (callback: (text: string) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, text: string) => callback(text);
+    ipcRenderer.on('text-selection-translate', handler);
+    return () => ipcRenderer.removeListener('text-selection-translate', handler);
+  },
 });
 
