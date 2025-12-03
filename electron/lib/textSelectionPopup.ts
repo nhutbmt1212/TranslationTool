@@ -39,6 +39,7 @@ const RIGHT_WIN_KEYCODE = 3676;
 let popupWindow: BrowserWindow | null = null;
 let lastClipboardText = '';
 let isSelectionMonitoringEnabled = false;
+let isSelectionMonitoringPaused = false;
 
 // Mouse tracking
 let isMouseDown = false;
@@ -286,7 +287,7 @@ function simulateCopy(): void {
 // Event Handlers
 // ============================================================================
 function handleMouseDown(e: UiohookMouseEvent): void {
-  if (e.button !== 1) return;
+  if (e.button !== 1 || isSelectionMonitoringPaused) return;
 
   if (isPopupActive() && !isClickInsidePopup(e.x, e.y)) {
     hidePopup();
@@ -299,7 +300,7 @@ function handleMouseDown(e: UiohookMouseEvent): void {
 }
 
 function handleMouseUp(e: UiohookMouseEvent): void {
-  if (e.button !== 1 || !isMouseDown) return;
+  if (e.button !== 1 || !isMouseDown || isSelectionMonitoringPaused) return;
 
   isMouseDown = false;
   const now = Date.now();
@@ -384,6 +385,26 @@ function isMonitoringActive(): boolean {
   return isSelectionMonitoringEnabled;
 }
 
+function pauseSelectionMonitoring(): void {
+  isSelectionMonitoringPaused = true;
+  // Clear any pending timeouts
+  copyDebounceTimeout = clearTimeoutSafe(copyDebounceTimeout);
+  popupDebounceTimeout = clearTimeoutSafe(popupDebounceTimeout);
+  // Hide popup if visible
+  if (isPopupActive()) {
+    hidePopup(false);
+  }
+  // Reset mouse state
+  isMouseDown = false;
+}
+
+function resumeSelectionMonitoring(): void {
+  isSelectionMonitoringPaused = false;
+  // Reset state to prevent stale events
+  isMouseDown = false;
+  lastClipboardText = '';
+}
+
 // ============================================================================
 // Shortcut Management
 // ============================================================================
@@ -444,4 +465,6 @@ export {
   startSelectionMonitoring,
   stopSelectionMonitoring,
   isMonitoringActive,
+  pauseSelectionMonitoring,
+  resumeSelectionMonitoring,
 };

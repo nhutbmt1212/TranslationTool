@@ -5,6 +5,7 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { PATHS } from './constants.js';
 import { getMainWindow } from './windowManager.js';
+import { pauseSelectionMonitoring, resumeSelectionMonitoring } from './textSelectionPopup.js';
 
 let overlayWindow: BrowserWindow | null = null;
 
@@ -238,6 +239,9 @@ export function registerScreenCaptureIPC(): void {
   ipcMain.handle('screen-capture:select-desktop-region', async () => {
     const mainWindow = getMainWindow();
     try {
+      // Pause text selection monitoring to prevent popup during capture
+      pauseSelectionMonitoring();
+      
       mainWindow?.hide();
       await new Promise((r) => setTimeout(r, 300));
 
@@ -247,13 +251,16 @@ export function registerScreenCaptureIPC(): void {
         await new Promise((r) => setTimeout(r, 300));
         const captureResult = await captureWithPowerShell(selectedRegion);
         mainWindow?.show();
+        resumeSelectionMonitoring();
         return captureResult;
       } else {
         mainWindow?.show();
+        resumeSelectionMonitoring();
         return null;
       }
     } catch (error) {
       mainWindow?.show();
+      resumeSelectionMonitoring();
       throw new Error(`Desktop selection failed: ${error}`);
     }
   });
