@@ -1,239 +1,193 @@
-import { dialog, shell } from 'electron';
+import { dialog } from 'electron';
 import { spawn } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
+import { app } from 'electron';
+
+interface DependencyStatus {
+  python: boolean;
+  easyocr: boolean;
+  edgetts: boolean;
+  torch: boolean;
+}
 
 /**
- * Check if Python is installed on the system
+ * Get Python executable path
+ */
+function getPythonCmd(): string {
+  const isDev = !app.isPackaged;
+  
+  if (isDev) {
+    return 'python';
+  }
+  
+  // Production: check embedded Python first
+  const embeddedPython = path.join(process.resourcesPath, 'python-embedded', 'python.exe');
+  if (fs.existsSync(embeddedPython)) {
+    return embeddedPython;
+  }
+  
+  return 'python';
+}
+
+/**
+ * Check if a Python module is installed
+ */
+async function checkPythonModule(moduleName: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const pythonCmd = getPythonCmd();
+    const proc = spawn(pythonCmd, ['-c', `import ${moduleName}`]);
+    
+    proc.on('error', () => resolve(false));
+    proc.on('close', (code) => resolve(code === 0));
+  });
+}
+
+/**
+ * Check if Python is installed
  */
 export async function checkPythonInstalled(): Promise<boolean> {
   return new Promise((resolve) => {
-    // Try 'py' first (Python launcher on Windows)
-    const py = spawn('py', ['--version']);
+    const pythonCmd = getPythonCmd();
+    const proc = spawn(pythonCmd, ['--version']);
     
-    py.on('error', () => {
-      // Try 'python' as fallback
-      const python = spawn('python', ['--version']);
-      
-      python.on('error', () => {
-        resolve(false);
-      });
-      
-      python.on('close', (code) => {
-        resolve(code === 0);
-      });
+    proc.on('error', () => {
+      // Try 'py' launcher on Windows
+      const py = spawn('py', ['--version']);
+      py.on('error', () => resolve(false));
+      py.on('close', (code) => resolve(code === 0));
     });
     
-    py.on('close', (code) => {
-      resolve(code === 0);
-    });
+    proc.on('close', (code) => resolve(code === 0));
   });
 }
 
 /**
- * Check if EasyOCR is installed
+ * Check all required dependencies
  */
-export async function checkEasyOCRInstalled(): Promise<boolean> {
-  return new Promise((resolve) => {
-    const py = spawn('py', ['-c', 'import easyocr']);
-    
-    py.on('error', () => {
-      resolve(false);
-    });
-    
-    py.on('close', (code) => {
-      resolve(code === 0);
-    });
+export async function checkAllDependencies(): Promise<DependencyStatus> {
+  const python = await checkPythonInstalled();
+  
+  if (!python) {
+    return {
+      python: false,
+      easyocr: false,
+      edgetts: false,
+      torch: false,
+    };
+  }
+  
+  const [easyocr, edgetts, torch] = await Promise.all([
+    checkPythonModule('easyocr'),
+    checkPythonModule('edge_tts'),
+    checkPythonModule('torch'),
+  ]);
+  
+  return { python, easyocr, edgetts, torch };
+}
+
+/**
+ * Get missing dependencies message
+ */
+function getMissingDepsMessage(status: DependencyStatus): string {
+  const missing: string[] = [];
+  
+  if (!status.python) missing.push('Python');
+  if (!status.torch) missing.push('PyTorch');
+  if (!status.easyocr) missing.push('EasyOCR');
+  if (!status.edgetts) missing.push('edge-tts');
+  
+  return missing.join(', ');
+}
+
+/**
+ * Force install all dependencies - no skip option
+ */
+export async function forceInstallDependencies(resourcesPath: string): Promise<void> {
+  const status = await checkAllDependencies();
+  
+  // Check if all dependencies are installed
+  if (status.python && status.easyocr && status.edgetts && status.torch) {
+    console.log('✅ All Python dependencies are installed!');
+    return;
+  }
+  
+  const missingDeps = getMissingDepsMessage(status);
+  console.log(`❌ Missing dependencies: ${missingDeps}`);
+  
+  // Show mandatory installation dialog
+  await dialog.showMessageBox({
+    type: 'warning',
+    title: 'Cài đặt thư viện Python',
+    message: 'Thiếu thư viện Python cần thiết!',
+    detail: `DALIT cần các thư viện sau để hoạt động:\n\n` +
+            `❌ Thiếu: ${missingDeps}\n\n` +
+            `Bạn BẮT BUỘC phải cài đặt để sử dụng đầy đủ tính năng:\n` +
+            `• OCR (nhận dạng chữ trong ảnh)\n` +
+            `• TTS (đọc văn bản)\n\n` +
+            `Nhấn OK để bắt đầu cài đặt tự động.\n` +
+            `Quá trình cài đặt mất khoảng 10-15 phút.`,
+    buttons: ['OK - Cài đặt ngay'],
+    defaultId: 0,
+    noLink: true,
   });
-}
-
-/**
- * Show dialog to install Python and dependencies
- */
-export async function promptPythonInstallation(resourcesPath: string): Promise<boolean> {
-  const hasPython = await checkPythonInstalled();
   
-  if (!hasPython) {
-    const result = await dialog.showMessageBox({
-      type: 'info',
-      title: 'Python OCR Setup',
-      message: 'Enable Python OCR for better accuracy?',
-      detail: 'DALIT can use Python OCR (EasyOCR) for better text recognition.\n\n' +
-              '✅ Automatic installation available!\n' +
-              '   - Downloads Python embedded (~25MB)\n' +
-              '   - Installs EasyOCR (~2GB total)\n' +
-              '   - Takes 10-15 minutes\n\n' +
-              '⚠️ Or skip and use Tesseract.js (JavaScript OCR)\n' +
-              '   - Already included\n' +
-              '   - Works offline\n' +
-              '   - Slightly lower accuracy\n\n' +
-              'Recommended: Install Python OCR for best results!',
-      buttons: ['Auto Install Python OCR', 'Skip (Use Tesseract.js)', 'Remind Me Later'],
-      defaultId: 0,
-      cancelId: 2,
+  // Run installation script with admin privileges
+  const scriptPath = path.join(resourcesPath, 'scripts', 'install-python.bat');
+  
+  if (fs.existsSync(scriptPath)) {
+    console.log('🚀 Starting mandatory Python installation with admin...');
+    
+    // Use PowerShell to run script as admin (triggers UAC)
+    spawn('powershell.exe', [
+      '-Command',
+      `Start-Process -FilePath 'cmd.exe' -ArgumentList '/k', '"${scriptPath}"' -Verb RunAs`
+    ], {
+      detached: true,
+      stdio: 'ignore',
+      shell: true,
     });
     
-    if (result.response === 0) {
-      // Run automatic installation
-      const scriptPath = path.join(resourcesPath, 'scripts', 'install-python.bat');
-      
-      if (fs.existsSync(scriptPath)) {
-        console.log('🚀 Starting automatic Python installation...');
-        
-        spawn('cmd.exe', ['/c', 'start', 'cmd.exe', '/k', scriptPath], {
-          detached: true,
-          stdio: 'ignore',
-        });
-        
-        await dialog.showMessageBox({
-          type: 'info',
-          title: 'Installing Python OCR',
-          message: 'Automatic installation started',
-          detail: 'A terminal window will open showing installation progress.\n\n' +
-                  'Steps:\n' +
-                  '1. Download Python embedded (~25MB)\n' +
-                  '2. Install pip\n' +
-                  '3. Install PyTorch (~1.5GB)\n' +
-                  '4. Install EasyOCR (~500MB)\n\n' +
-                  'Total time: 10-15 minutes\n\n' +
-                  'After installation completes, restart DALIT.',
-          buttons: ['OK'],
-        });
-      } else {
-        console.error('❌ Installation script not found');
-        
-        await dialog.showMessageBox({
-          type: 'warning',
-          title: 'Installation Unavailable',
-          message: 'Automatic installation not available',
-          detail: 'Please install Python manually from:\n' +
-                  'https://www.python.org/downloads/\n\n' +
-                  'Then run: py -m pip install easyocr torch torchvision',
-          buttons: ['OK'],
-        });
-      }
-      
-      return false;
-    } else if (result.response === 1) {
-      // User chose to skip
-      console.log('⏭️ User skipped Python OCR installation');
-      return false;
-    } else {
-      // Remind later
-      console.log('⏰ User chose to be reminded later');
-      return false;
-    }
-  }
-  
-  // Python is installed, check EasyOCR
-  const hasEasyOCR = await checkEasyOCRInstalled();
-  
-  if (!hasEasyOCR) {
-    const result = await dialog.showMessageBox({
+    await dialog.showMessageBox({
       type: 'info',
-      title: 'Python OCR Setup',
-      message: 'Install EasyOCR?',
-      detail: 'Python is installed, but EasyOCR is not.\n\n' +
-              'EasyOCR provides better text recognition accuracy.\n' +
-              'Installation will download ~2GB of data.\n\n' +
-              'Would you like to install it now?',
-      buttons: ['Install EasyOCR', 'Skip (Use Tesseract.js)', 'Remind Me Later'],
-      defaultId: 0,
-      cancelId: 2,
+      title: 'Đang cài đặt...',
+      message: 'Cài đặt đã bắt đầu',
+      detail: 'Một cửa sổ terminal sẽ mở ra hiển thị tiến trình.\n\n' +
+              'Các bước cài đặt:\n' +
+              '1. Cài Visual C++ Redistributable\n' +
+              '2. Cài Python embedded (~25MB)\n' +
+              '3. Cài PyTorch (~1.5GB)\n' +
+              '4. Cài EasyOCR (~500MB)\n' +
+              '5. Cài edge-tts (~1MB)\n\n' +
+              'Tổng thời gian: 10-15 phút\n\n' +
+              'DALIT sẽ tự động khởi động lại sau khi cài xong.',
+      buttons: ['OK'],
     });
     
-    if (result.response === 0) {
-      // Run installation script
-      const scriptPath = path.join(resourcesPath, 'scripts', 'install-python.bat');
-      
-      if (fs.existsSync(scriptPath)) {
-        console.log('🚀 Starting Python installation script:', scriptPath);
-        
-        // Open terminal and run script
-        spawn('cmd.exe', ['/c', 'start', 'cmd.exe', '/k', scriptPath], {
-          detached: true,
-          stdio: 'ignore',
-        });
-        
-        await dialog.showMessageBox({
-          type: 'info',
-          title: 'Installing Python OCR',
-          message: 'Automatic installation started',
-          detail: 'A terminal window will open to install Python and EasyOCR.\n\n' +
-                  'The script will:\n' +
-                  '1. Download Python embedded (~25MB)\n' +
-                  '2. Install pip\n' +
-                  '3. Install PyTorch (~1.5GB)\n' +
-                  '4. Install EasyOCR (~500MB)\n\n' +
-                  'Total time: 10-15 minutes\n' +
-                  'Total download: ~2GB\n\n' +
-                  'After installation completes, restart DALIT to use Python OCR.',
-          buttons: ['OK'],
-        });
-      } else {
-        console.error('❌ Installation script not found:', scriptPath);
-        
-        // Fallback: show manual instructions
-        await dialog.showMessageBox({
-          type: 'warning',
-          title: 'Installation Script Not Found',
-          message: 'Automatic installation unavailable',
-          detail: 'Please install manually:\n\n' +
-                  '1. Install Python from https://www.python.org/downloads/\n' +
-                  '2. Open Command Prompt\n' +
-                  '3. Run: py -m pip install easyocr torch torchvision\n\n' +
-                  'After installation, restart DALIT.',
-          buttons: ['OK'],
-        });
-      }
-      
-      return false;
-    } else if (result.response === 1) {
-      // User chose to skip
-      return false;
-    } else {
-      // Remind later
-      return false;
-    }
+    // Exit app to let installation complete
+    app.quit();
+  } else {
+    console.error('❌ Installation script not found:', scriptPath);
+    
+    await dialog.showMessageBox({
+      type: 'error',
+      title: 'Lỗi',
+      message: 'Không tìm thấy script cài đặt',
+      detail: 'Vui lòng cài đặt thủ công:\n\n' +
+              '1. Cài Python từ https://www.python.org/downloads/\n' +
+              '2. Mở Command Prompt\n' +
+              '3. Chạy: pip install easyocr torch torchvision edge-tts\n\n' +
+              'Sau đó khởi động lại DALIT.',
+      buttons: ['OK'],
+    });
+    
+    app.quit();
   }
-  
-  // Both Python and EasyOCR are installed
-  return true;
 }
 
 /**
- * Check if Python OCR was successfully installed (marker file exists)
- */
-export function checkInstallationMarker(resourcesPath: string): boolean {
-  const markerFile = path.join(resourcesPath, 'python-ocr-installed.flag');
-  return fs.existsSync(markerFile);
-}
-
-/**
- * Check and prompt for Python setup on first run
+ * Check and setup Python on app start - MANDATORY
  */
 export async function checkAndSetupPython(resourcesPath: string): Promise<void> {
-  // Check if we should skip the prompt (user already chose to skip)
-  const skipPromptFile = path.join(resourcesPath, '.skip-python-prompt');
-  
-  if (fs.existsSync(skipPromptFile)) {
-    console.log('⏭️ Skipping Python setup prompt (user preference)');
-    return;
-  }
-  
-  // Check if installation was already completed via marker file
-  if (checkInstallationMarker(resourcesPath)) {
-    console.log('✅ Python OCR installation marker found, skipping prompt');
-    return;
-  }
-  
-  const hasPython = await checkPythonInstalled();
-  const hasEasyOCR = hasPython ? await checkEasyOCRInstalled() : false;
-  
-  if (!hasPython || !hasEasyOCR) {
-    console.log('🔧 Python OCR not fully set up, prompting user...');
-    await promptPythonInstallation(resourcesPath);
-  } else {
-    console.log('✅ Python OCR is ready!');
-  }
+  await forceInstallDependencies(resourcesPath);
 }

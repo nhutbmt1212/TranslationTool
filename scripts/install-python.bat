@@ -3,25 +3,17 @@ REM Auto-install Python Embedded and EasyOCR for DALIT
 REM This script downloads Python portable and installs dependencies automatically
 
 REM ========================================
-REM Auto-elevate to admin if needed
+REM Auto-elevate to admin using PowerShell
 REM ========================================
->nul 2>&1 "%SYSTEMROOT%\system32\cacls.exe" "%SYSTEMROOT%\system32\config\system"
-
-if '%errorlevel%' NEQ '0' (
+net session >nul 2>&1
+if %errorlevel% neq 0 (
     echo Requesting administrative privileges...
-    goto UACPrompt
-) else ( goto gotAdmin )
-
-:UACPrompt
-    echo Set UAC = CreateObject^("Shell.Application"^) > "%temp%\getadmin.vbs"
-    echo UAC.ShellExecute "%~s0", "", "", "runas", 1 >> "%temp%\getadmin.vbs"
-    "%temp%\getadmin.vbs"
-    del "%temp%\getadmin.vbs"
+    powershell -Command "Start-Process -FilePath '%~f0' -Verb RunAs"
     exit /B
+)
 
-:gotAdmin
-    pushd "%CD%"
-    CD /D "%~dp0"
+REM Now running as admin
+cd /D "%~dp0"
 
 setlocal enabledelayedexpansion
 
