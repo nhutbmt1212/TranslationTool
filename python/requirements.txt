@@ -1,0 +1,8 @@
+# OCR engines (choose one or both)
+easyocr>=1.7.0
+# pytesseract>=0.3.10
+# pillow>=10.0.0
+
+# Optional: for better performance
+torch>=2.0.0
+torchvision>=0.15.0

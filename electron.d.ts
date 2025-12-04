@@ -65,6 +65,26 @@ export interface ElectronAPI {
   getFeaturesConfig: () => Promise<{ quickCaptureEnabled: boolean; textSelectionEnabled: boolean; textSelectionIgnoreEnabled: boolean }>;
   saveFeaturesConfig: (config: { quickCaptureEnabled: boolean; textSelectionEnabled: boolean; textSelectionIgnoreEnabled: boolean }) => Promise<void>;
   applyFeaturesConfig: (config: { quickCaptureEnabled: boolean; textSelectionEnabled: boolean; textSelectionIgnoreEnabled: boolean }) => Promise<void>;
+
+  // Python OCR APIs
+  pythonOCR: {
+    checkAvailable: () => Promise<{ success: boolean; available: boolean }>;
+    processImage: (imagePath: string, languages?: string[]) => Promise<{
+      success: boolean;
+      text?: string;
+      blocks?: Array<{
+        text: string;
+        confidence: number;
+        bbox: { x: number; y: number; width: number; height: number };
+      }>;
+      engine?: string;
+      error?: string;
+    }>;
+  };
+
+  // Temp file helpers
+  saveToTemp: (buffer: number[], filename: string) => Promise<string>;
+  cleanupTemp: (filePath: string) => Promise<void>;
 }
 
 declare global {

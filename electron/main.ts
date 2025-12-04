@@ -9,6 +9,7 @@ import { registerScreenCaptureIPC } from './lib/screenCapture.js';
 import { registerCoreIPC } from './lib/ipcHandlers.js';
 import { registerGlobalShortcuts, unregisterAllShortcuts } from './lib/shortcuts.js';
 import { registerTextSelectionIPC, startSelectionMonitoring } from './lib/textSelectionPopup.js';
+import { checkAndSetupPython } from './lib/pythonSetup.js';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -68,6 +69,16 @@ app.whenReady().then(() => {
   
   // Check for updates on startup
   checkForUpdatesOnStartup();
+  
+  // Check and setup Python OCR (async, non-blocking)
+  setTimeout(async () => {
+    try {
+      const resourcesPath = process.resourcesPath || app.getAppPath();
+      await checkAndSetupPython(resourcesPath);
+    } catch (error) {
+      console.error('Failed to check Python setup:', error);
+    }
+  }, 3000); // Wait 3 seconds after app starts
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

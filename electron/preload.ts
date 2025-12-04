@@ -90,6 +90,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('save-features-config', config),
   applyFeaturesConfig: (config: { quickCaptureEnabled: boolean; textSelectionEnabled: boolean; textSelectionIgnoreEnabled: boolean }) =>
     ipcRenderer.invoke('apply-features-config', config),
+
+  // Python OCR APIs
+  pythonOCR: {
+    checkAvailable: () => ipcRenderer.invoke('python-ocr:check-available'),
+    processImage: (imagePath: string, languages?: string[]) => 
+      ipcRenderer.invoke('python-ocr:process-image', imagePath, languages),
+  },
+
+  // Temp file helpers
+  saveToTemp: (buffer: number[], filename: string) => 
+    ipcRenderer.invoke('save-to-temp', buffer, filename),
+  cleanupTemp: (filePath: string) => 
+    ipcRenderer.invoke('cleanup-temp', filePath),
 });
 
 // Also expose as 'electron' for backward compatibility
@@ -182,5 +195,18 @@ contextBridge.exposeInMainWorld('electron', {
     ipcRenderer.invoke('save-features-config', config),
   applyFeaturesConfig: (config: { quickCaptureEnabled: boolean; textSelectionEnabled: boolean; textSelectionIgnoreEnabled: boolean }) =>
     ipcRenderer.invoke('apply-features-config', config),
+
+  // Python OCR APIs
+  pythonOCR: {
+    checkAvailable: () => ipcRenderer.invoke('python-ocr:check-available'),
+    processImage: (imagePath: string, languages?: string[]) => 
+      ipcRenderer.invoke('python-ocr:process-image', imagePath, languages),
+  },
+
+  // Temp file helpers
+  saveToTemp: (buffer: number[], filename: string) => 
+    ipcRenderer.invoke('save-to-temp', buffer, filename),
+  cleanupTemp: (filePath: string) => 
+    ipcRenderer.invoke('cleanup-temp', filePath),
 });
 

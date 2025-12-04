@@ -2,6 +2,7 @@ import { ipcMain, app } from 'electron';
 import { getMainWindow, setQuitting } from './windowManager.js';
 import { reloadShortcuts } from './shortcuts.js';
 import { startSelectionMonitoring, stopSelectionMonitoring } from './textSelectionPopup.js';
+import { getPythonOCRService } from './pythonOCR.js';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -131,6 +132,57 @@ export function registerCoreIPC(): void {
     } catch (error) {
       console.error('Failed to apply features config:', error);
       throw error;
+    }
+  });
+
+  // Python OCR handlers
+  ipcMain.handle('python-ocr:check-available', async () => {
+    try {
+      const ocrService = getPythonOCRService();
+      const available = await ocrService.isAvailable();
+      return { success: true, available };
+    } catch (error) {
+      console.error('Failed to check Python OCR availability:', error);
+      return { success: false, available: false };
+    }
+  });
+
+  ipcMain.handle('python-ocr:process-image', async (_event, imagePath: string, languages?: string[]) => {
+    try {
+      const ocrService = getPythonOCRService();
+      const result = await ocrService.processImage(imagePath, languages);
+      return result;
+    } catch (error) {
+      console.error('Failed to process image with Python OCR:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  });
+
+  // Temp file handlers for Python OCR
+  ipcMain.handle('save-to-temp', async (_event, bufferArray: number[], filename: string) => {
+    try {
+      const tempDir = app.getPath('temp');
+      const tempPath = path.join(tempDir, `ocr-${Date.now()}-${filename}`);
+      // Convert array back to Buffer
+      const buffer = Buffer.from(bufferArray);
+      fs.writeFileSync(tempPath, buffer);
+      return tempPath;
+    } catch (error) {
+      console.error('Failed to save temp file:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('cleanup-temp', async (_event, filePath: string) => {
+    try {
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    } catch (error) {
+      console.error('Failed to cleanup temp file:', error);
     }
   });
 }

@@ -68,6 +68,23 @@
       {
         "from": "release/.icon-ico/icon.ico",
         "to": "icon.ico"
+      },
+      {
+        "from": "python",
+        "to": "python",
+        "filter": [
+          "**/*",
+          "!venv/**/*",
+          "!__pycache__/**/*",
+          "!*.pyc"
+        ]
+      },
+      {
+        "from": "scripts",
+        "to": "scripts",
+        "filter": [
+          "*.bat"
+        ]
       }
     ],
     "win": {
