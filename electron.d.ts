@@ -82,6 +82,18 @@ export interface ElectronAPI {
     }>;
   };
 
+  // Python TTS APIs
+  pythonTTS: {
+    checkAvailable: () => Promise<{ success: boolean; available: boolean }>;
+    synthesize: (text: string, language: string) => Promise<{
+      success: boolean;
+      audio_data?: string;
+      voice?: string;
+      engine?: string;
+      error?: string;
+    }>;
+  };
+
   // Temp file helpers
   saveToTemp: (buffer: number[], filename: string) => Promise<string>;
   cleanupTemp: (filePath: string) => Promise<void>;

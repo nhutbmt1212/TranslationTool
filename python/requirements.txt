@@ -6,3 +6,6 @@ easyocr>=1.7.0
 # Optional: for better performance
 torch>=2.0.0
 torchvision>=0.15.0
+
+# Text-to-Speech
+edge-tts>=6.1.0

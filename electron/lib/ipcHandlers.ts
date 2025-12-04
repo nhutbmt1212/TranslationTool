@@ -3,6 +3,7 @@ import { getMainWindow, setQuitting } from './windowManager.js';
 import { reloadShortcuts } from './shortcuts.js';
 import { startSelectionMonitoring, stopSelectionMonitoring } from './textSelectionPopup.js';
 import { getPythonOCRService } from './pythonOCR.js';
+import { checkPythonTTSAvailable, synthesizeSpeech } from './pythonTTS.js';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -183,6 +184,30 @@ export function registerCoreIPC(): void {
       }
     } catch (error) {
       console.error('Failed to cleanup temp file:', error);
+    }
+  });
+
+  // Python TTS handlers
+  ipcMain.handle('python-tts:check-available', async () => {
+    try {
+      const available = await checkPythonTTSAvailable();
+      return { success: true, available };
+    } catch (error) {
+      console.error('Failed to check Python TTS availability:', error);
+      return { success: false, available: false };
+    }
+  });
+
+  ipcMain.handle('python-tts:synthesize', async (_event, text: string, language: string) => {
+    try {
+      const result = await synthesizeSpeech(text, language);
+      return result;
+    } catch (error) {
+      console.error('Failed to synthesize speech:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
     }
   });
 }

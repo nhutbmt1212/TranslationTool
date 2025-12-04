@@ -223,7 +223,7 @@ echo   [OK] PyTorch installed successfully
 
 REM Install EasyOCR
 echo.
-echo ^> [3/4] Installing EasyOCR (~500MB)...
+echo ^> [3/5] Installing EasyOCR (~500MB)...
 "%PYTHON_CMD%" -m pip install easyocr --no-warn-script-location --progress-bar on
 if %errorlevel% neq 0 (
     echo   [X] Failed to install EasyOCR!
@@ -232,14 +232,29 @@ if %errorlevel% neq 0 (
 )
 echo   [OK] EasyOCR installed successfully
 
+REM Install edge-tts for Text-to-Speech
 echo.
-echo ^> [4/4] Verifying installation...
+echo ^> [4/5] Installing edge-tts (Text-to-Speech)...
+"%PYTHON_CMD%" -m pip install edge-tts --no-warn-script-location --progress-bar on
+if %errorlevel% neq 0 (
+    echo   [WARNING] Failed to install edge-tts, TTS will use fallback
+) else (
+    echo   [OK] edge-tts installed successfully
+)
+
+echo.
+echo ^> [5/5] Verifying installation...
 "%PYTHON_CMD%" -c "import easyocr; print('   EasyOCR version:', easyocr.__version__)"
 
 if %errorlevel% neq 0 (
     echo   [X] EasyOCR verification failed!
     pause
     exit /b 1
+)
+
+"%PYTHON_CMD%" -c "import edge_tts; print('   edge-tts: OK')" 2>nul
+if %errorlevel% neq 0 (
+    echo   [WARNING] edge-tts not available, using fallback TTS
 )
 
 :success
@@ -258,6 +273,7 @@ if exist "%PYTHON_EXE%" (
 )
 echo - EasyOCR: Installed
 echo - PyTorch: Installed
+echo - edge-tts: Installed (Text-to-Speech)
 echo.
 
 REM Create success marker file so DALIT knows installation completed

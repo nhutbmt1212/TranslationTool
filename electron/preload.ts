@@ -98,6 +98,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('python-ocr:process-image', imagePath, languages),
   },
 
+  // Python TTS APIs
+  pythonTTS: {
+    checkAvailable: () => ipcRenderer.invoke('python-tts:check-available'),
+    synthesize: (text: string, language: string) => 
+      ipcRenderer.invoke('python-tts:synthesize', text, language),
+  },
+
   // Temp file helpers
   saveToTemp: (buffer: number[], filename: string) => 
     ipcRenderer.invoke('save-to-temp', buffer, filename),
@@ -203,10 +210,16 @@ contextBridge.exposeInMainWorld('electron', {
       ipcRenderer.invoke('python-ocr:process-image', imagePath, languages),
   },
 
+  // Python TTS APIs
+  pythonTTS: {
+    checkAvailable: () => ipcRenderer.invoke('python-tts:check-available'),
+    synthesize: (text: string, language: string) => 
+      ipcRenderer.invoke('python-tts:synthesize', text, language),
+  },
+
   // Temp file helpers
   saveToTemp: (buffer: number[], filename: string) => 
     ipcRenderer.invoke('save-to-temp', buffer, filename),
   cleanupTemp: (filePath: string) => 
     ipcRenderer.invoke('cleanup-temp', filePath),
 });
-
