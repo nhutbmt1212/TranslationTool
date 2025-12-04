@@ -6,8 +6,9 @@ import ApiKeySection from './settings/ApiKeySection';
 import UpdateSection from './settings/UpdateSection';
 import ShortcutsSection from './settings/ShortcutsSection';
 import TextSelectionIgnoreSection from './settings/TextSelectionIgnoreSection';
+import FeaturesSection from './settings/FeaturesSection';
 import SettingsActions from './settings/SettingsActions';
-import { TabType } from '../types/settings';
+import { TabType, FeaturesConfig } from '../types/settings';
 import '../styles/modal.css';
 import '../styles/settings-modal.css';
 
@@ -59,11 +60,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) => {
   });
   const [isLoadingTextSelection, setIsLoadingTextSelection] = useState(true);
 
+  // Features state
+  const [featuresConfig, setFeaturesConfig] = useState<FeaturesConfig>({
+    quickCaptureEnabled: true,
+    textSelectionEnabled: true,
+    textSelectionIgnoreEnabled: true,
+  });
+  const [isLoadingFeatures, setIsLoadingFeatures] = useState(true);
+
   useEffect(() => {
     if (open) {
       loadMaskedKey();
       loadAppVersion();
       loadTextSelectionConfig();
+      loadFeaturesConfig();
       setApiKey('');
       setShowKey(false);
     }
@@ -80,6 +90,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) => {
       console.error('Failed to load text selection ignore config:', error);
     } finally {
       setIsLoadingTextSelection(false);
+    }
+  };
+
+  const loadFeaturesConfig = async () => {
+    try {
+      const electronAPI = window.electronAPI as any;
+      if (electronAPI?.getFeaturesConfig) {
+        const data = await electronAPI.getFeaturesConfig();
+        setFeaturesConfig(data);
+      }
+    } catch (error) {
+      console.error('Failed to load features config:', error);
+    } finally {
+      setIsLoadingFeatures(false);
     }
   };
 
@@ -106,6 +130,25 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) => {
     } catch (error) {
       console.error('Failed to save text selection config:', error);
       alert('Failed to save configuration');
+    }
+  };
+
+  const handleSaveFeaturesAndClose = async () => {
+    try {
+      const electronAPI = window.electronAPI as any;
+      if (electronAPI?.saveFeaturesConfig) {
+        await electronAPI.saveFeaturesConfig(featuresConfig);
+        
+        // Apply features config changes
+        if (electronAPI?.applyFeaturesConfig) {
+          await electronAPI.applyFeaturesConfig(featuresConfig);
+        }
+        
+        setTimeout(() => onClose(), 500);
+      }
+    } catch (error) {
+      console.error('Failed to save features config:', error);
+      alert('Failed to save features configuration');
     }
   };
 
@@ -157,19 +200,39 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) => {
               isLoading={isLoadingTextSelection}
             />
           )}
+
+          {activeTab === 'features' && (
+            <FeaturesSection
+              config={featuresConfig}
+              setConfig={setFeaturesConfig}
+              isLoading={isLoadingFeatures}
+            />
+          )}
         </div>
 
         {/* Actions - Always at bottom */}
         <SettingsActions
           activeTab={activeTab}
-          isLoading={activeTab === 'textSelectionIgnore' ? isLoadingTextSelection : isLoading}
+          isLoading={
+            activeTab === 'textSelectionIgnore' 
+              ? isLoadingTextSelection 
+              : activeTab === 'features'
+              ? isLoadingFeatures
+              : isLoading
+          }
           apiKey={apiKey}
           updateReady={updateReady}
           updateAvailable={updateAvailable}
           downloading={downloading}
           checkingUpdate={checkingUpdate}
           updateInfo={updateInfo}
-          onSave={activeTab === 'textSelectionIgnore' ? handleSaveTextSelectionAndClose : handleSaveAndClose}
+          onSave={
+            activeTab === 'textSelectionIgnore' 
+              ? handleSaveTextSelectionAndClose 
+              : activeTab === 'features'
+              ? handleSaveFeaturesAndClose
+              : handleSaveAndClose
+          }
           onClose={onClose}
           onInstallUpdate={handleInstallUpdate}
           onDownloadUpdate={() => handleDownloadUpdate(false)}

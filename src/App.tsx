@@ -148,7 +148,7 @@ const App: React.FC = () => {
 
   return (
     <div className="app-shell">
-      <ImageTranslator />
+      {!settingsOpen && <ImageTranslator />}
       <div className="orb orb-one" aria-hidden="true" />
       <div className="orb orb-two" aria-hidden="true" />
       <div className="grid-overlay" aria-hidden="true" />

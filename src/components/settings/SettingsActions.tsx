@@ -91,7 +91,7 @@ const SettingsActions: React.FC<SettingsActionsProps> = ({
     );
   }
 
-  if (activeTab === 'textSelectionIgnore') {
+  if (activeTab === 'textSelectionIgnore' || activeTab === 'features') {
     return (
       <div className="settings-actions">
         <button

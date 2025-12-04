@@ -46,25 +46,6 @@ const TextSelectionIgnoreSection: React.FC<TextSelectionIgnoreSectionProps> = ({
 
   return (
     <div className="settings-section">
-      <div className="settings-section-header">
-        <h3>{t('settings.textSelectionIgnore.title')}</h3>
-        <p className="settings-section-description">
-          {t('settings.textSelectionIgnore.description')}
-        </p>
-      </div>
-
-      <div className="settings-field">
-        <label className="settings-toggle-label">
-          <input
-            type="checkbox"
-            checked={config.enabled}
-            onChange={handleToggleEnabled}
-            className="settings-toggle"
-          />
-          <span>{t('settings.textSelectionIgnore.enableFeature')}</span>
-        </label>
-      </div>
-
       <div className="settings-field">
         <label className="settings-label">
           {t('settings.textSelectionIgnore.addApp')}

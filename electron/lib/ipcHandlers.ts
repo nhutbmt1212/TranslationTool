@@ -1,5 +1,7 @@
 import { ipcMain, app } from 'electron';
 import { getMainWindow, setQuitting } from './windowManager.js';
+import { reloadShortcuts } from './shortcuts.js';
+import { startSelectionMonitoring, stopSelectionMonitoring } from './textSelectionPopup.js';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -66,6 +68,68 @@ export function registerCoreIPC(): void {
       return { success: true };
     } catch (error) {
       console.error('Failed to save text selection ignore config:', error);
+      throw error;
+    }
+  });
+
+  // Features Config handlers
+  ipcMain.handle('get-features-config', async () => {
+    try {
+      const configPath = path.join(app.getPath('userData'), 'features.json');
+      
+      if (!fs.existsSync(configPath)) {
+        // Return default config
+        return {
+          quickCaptureEnabled: true,
+          textSelectionEnabled: true,
+          textSelectionIgnoreEnabled: true,
+        };
+      }
+
+      const data = fs.readFileSync(configPath, 'utf-8');
+      return JSON.parse(data);
+    } catch (error) {
+      console.error('Failed to load features config:', error);
+      return {
+        quickCaptureEnabled: true,
+        textSelectionEnabled: true,
+        textSelectionIgnoreEnabled: true,
+      };
+    }
+  });
+
+  ipcMain.handle('save-features-config', async (_event, config) => {
+    try {
+      const configPath = path.join(app.getPath('userData'), 'features.json');
+      fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
+      return { success: true };
+    } catch (error) {
+      console.error('Failed to save features config:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('apply-features-config', async (_event, config) => {
+    try {
+      // Apply features config changes
+      console.log('Applying features config:', config);
+      
+      // 1. Reload shortcuts based on new config (quick capture)
+      reloadShortcuts();
+      
+      // 2. Apply text selection monitoring config
+      if (config.textSelectionEnabled) {
+        startSelectionMonitoring();
+        console.log('Text selection monitoring enabled');
+      } else {
+        stopSelectionMonitoring();
+        console.log('Text selection monitoring disabled');
+      }
+      
+      console.log('Features config applied successfully');
+      return { success: true };
+    } catch (error) {
+      console.error('Failed to apply features config:', error);
       throw error;
     }
   });

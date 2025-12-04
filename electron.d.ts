@@ -60,6 +60,11 @@ export interface ElectronAPI {
   // Text Selection Ignore Config APIs
   getTextSelectionIgnoreConfig: () => Promise<{ ignoredApplications: string[]; enabled: boolean }>;
   saveTextSelectionIgnoreConfig: (config: { ignoredApplications: string[]; enabled: boolean }) => Promise<void>;
+
+  // Features Config APIs
+  getFeaturesConfig: () => Promise<{ quickCaptureEnabled: boolean; textSelectionEnabled: boolean; textSelectionIgnoreEnabled: boolean }>;
+  saveFeaturesConfig: (config: { quickCaptureEnabled: boolean; textSelectionEnabled: boolean; textSelectionIgnoreEnabled: boolean }) => Promise<void>;
+  applyFeaturesConfig: (config: { quickCaptureEnabled: boolean; textSelectionEnabled: boolean; textSelectionIgnoreEnabled: boolean }) => Promise<void>;
 }
 
 declare global {

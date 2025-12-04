@@ -526,7 +526,7 @@ export function registerTextSelectionIPC(): void {
   ipcMain.on('text-selection:popup-click', handlePopupClick);
 
   registerTextSelectionShortcut();
-  startSelectionMonitoring();
+  // Don't auto-start monitoring here - let main.ts control it based on config
 }
 
 export function cleanupTextSelection(): void {

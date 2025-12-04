@@ -83,6 +83,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getTextSelectionIgnoreConfig: () => ipcRenderer.invoke('get-text-selection-ignore-config'),
   saveTextSelectionIgnoreConfig: (config: { ignoredApplications: string[]; enabled: boolean }) =>
     ipcRenderer.invoke('save-text-selection-ignore-config', config),
+
+  // Features Config APIs
+  getFeaturesConfig: () => ipcRenderer.invoke('get-features-config'),
+  saveFeaturesConfig: (config: { quickCaptureEnabled: boolean; textSelectionEnabled: boolean; textSelectionIgnoreEnabled: boolean }) =>
+    ipcRenderer.invoke('save-features-config', config),
+  applyFeaturesConfig: (config: { quickCaptureEnabled: boolean; textSelectionEnabled: boolean; textSelectionIgnoreEnabled: boolean }) =>
+    ipcRenderer.invoke('apply-features-config', config),
 });
 
 // Also expose as 'electron' for backward compatibility
@@ -168,5 +175,12 @@ contextBridge.exposeInMainWorld('electron', {
   getTextSelectionIgnoreConfig: () => ipcRenderer.invoke('get-text-selection-ignore-config'),
   saveTextSelectionIgnoreConfig: (config: { ignoredApplications: string[]; enabled: boolean }) =>
     ipcRenderer.invoke('save-text-selection-ignore-config', config),
+
+  // Features Config APIs
+  getFeaturesConfig: () => ipcRenderer.invoke('get-features-config'),
+  saveFeaturesConfig: (config: { quickCaptureEnabled: boolean; textSelectionEnabled: boolean; textSelectionIgnoreEnabled: boolean }) =>
+    ipcRenderer.invoke('save-features-config', config),
+  applyFeaturesConfig: (config: { quickCaptureEnabled: boolean; textSelectionEnabled: boolean; textSelectionIgnoreEnabled: boolean }) =>
+    ipcRenderer.invoke('apply-features-config', config),
 });
 
