@@ -3,6 +3,8 @@ dist/
 dist-electron/
 dist-cli/
 release/
+python-embedded/
+redist/
 *.log
 .DS_Store
 .env

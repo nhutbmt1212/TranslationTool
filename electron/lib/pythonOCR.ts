@@ -152,19 +152,29 @@ export class PythonOCRService {
       // Step 3: Check if EasyOCR is installed
       console.log('📦 Checking EasyOCR...');
       try {
-        await this.runPython(['-c', 'import easyocr']);
+        // First check torch (common failure point)
+        console.log('   Checking torch...');
+        await this.runPython(['-c', 'import torch; print(torch.__version__)']);
+        console.log('   ✅ torch OK');
+        
+        // Then check easyocr
+        console.log('   Checking easyocr...');
+        await this.runPython(['-c', 'import easyocr; print(easyocr.__version__)']);
         console.log('✅ EasyOCR is installed!');
         console.log('🎉 Python OCR is ready to use!');
         return true;
       } catch (error) {
-        console.warn('⚠️ EasyOCR is not installed');
-        console.warn('   Error:', error instanceof Error ? error.message : error);
-        console.warn('');
-        console.warn('💡 To enable Python OCR (better accuracy):');
-        console.warn('   1. Open Command Prompt (cmd)');
-        console.warn('   2. Run: py -m pip install easyocr torch torchvision');
-        console.warn('   3. Wait 5-10 minutes for installation');
-        console.warn('   4. Restart this app');
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        console.warn('⚠️ EasyOCR check failed');
+        console.warn('   Full error:', errorMsg);
+        
+        // Check if it's a DLL/VC++ issue
+        if (errorMsg.includes('DLL') || errorMsg.includes('vcruntime') || errorMsg.includes('MSVCP')) {
+          console.warn('');
+          console.warn('💡 This looks like a Visual C++ Redistributable issue!');
+          console.warn('   Please install: https://aka.ms/vs/17/release/vc_redist.x64.exe');
+        }
+        
         console.warn('');
         console.warn('📝 For now, using Tesseract.js (still works fine!)');
         return false;

@@ -12,22 +12,48 @@ interface DependencyStatus {
 }
 
 /**
- * Get Python executable path
+ * Get Python executable path - prioritize embedded Python
  */
 function getPythonCmd(): string {
   const isDev = !app.isPackaged;
+  const basePath = isDev ? app.getAppPath() : process.resourcesPath;
   
-  if (isDev) {
-    return 'python';
+  // Try paths in order of preference
+  const pythonPaths = [
+    // 1. Python embedded (bundled with app)
+    path.join(basePath, 'python-embedded', 'python.exe'),
+    // 2. Virtual environment (dev mode)
+    path.join(basePath, 'python', 'venv', 'Scripts', 'python.exe'),
+    path.join(basePath, 'python', 'venv', 'bin', 'python'),
+  ];
+  
+  for (const pyPath of pythonPaths) {
+    if (fs.existsSync(pyPath)) {
+      console.log(`✅ [pythonSetup] Found Python at: ${pyPath}`);
+      return pyPath;
+    }
   }
   
-  // Production: check embedded Python first
-  const embeddedPython = path.join(process.resourcesPath, 'python-embedded', 'python.exe');
+  // Fallback to system Python
+  console.log('📌 [pythonSetup] Using system Python');
+  return process.platform === 'win32' ? 'py' : 'python3';
+}
+
+/**
+ * Check if embedded Python with all dependencies exists
+ */
+function hasEmbeddedPython(): boolean {
+  const isDev = !app.isPackaged;
+  const basePath = isDev ? app.getAppPath() : process.resourcesPath;
+  const embeddedPython = path.join(basePath, 'python-embedded', 'python.exe');
+  
   if (fs.existsSync(embeddedPython)) {
-    return embeddedPython;
+    console.log('✅ [pythonSetup] Embedded Python found:', embeddedPython);
+    return true;
   }
   
-  return 'python';
+  console.log('❌ [pythonSetup] Embedded Python not found at:', embeddedPython);
+  return false;
 }
 
 /**
@@ -186,8 +212,26 @@ export async function forceInstallDependencies(resourcesPath: string): Promise<v
 }
 
 /**
- * Check and setup Python on app start - MANDATORY
+ * Check and setup Python on app start
+ * If embedded Python exists, skip installation dialog
  */
 export async function checkAndSetupPython(resourcesPath: string): Promise<void> {
+  // If embedded Python is bundled, skip the installation check
+  if (hasEmbeddedPython()) {
+    console.log('✅ [pythonSetup] Using bundled Python embedded - skipping installation check');
+    
+    // Quick verify that dependencies work
+    const status = await checkAllDependencies();
+    if (status.python && status.easyocr && status.edgetts) {
+      console.log('✅ [pythonSetup] All bundled dependencies verified!');
+      return;
+    } else {
+      console.warn('⚠️ [pythonSetup] Some bundled dependencies may be missing, but continuing...');
+      console.warn('   Status:', JSON.stringify(status));
+      return; // Still continue, don't force install
+    }
+  }
+  
+  // Only force install if no embedded Python
   await forceInstallDependencies(resourcesPath);
 }
