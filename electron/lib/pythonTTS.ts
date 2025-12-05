@@ -16,22 +16,27 @@ interface TTSResult {
  */
 function getPythonPath(): string {
   const isDev = !app.isPackaged;
+  const basePath = isDev ? app.getAppPath() : process.resourcesPath;
   
-  if (isDev) {
-    // Development: use system Python or venv
-    return 'python';
-  }
+  // Try paths in order of preference
+  const pythonPaths = [
+    // 1. Python embedded (bundled with app)
+    path.join(basePath, 'python-embedded', 'python.exe'),
+    // 2. Virtual environment (dev mode)
+    path.join(basePath, 'python', 'venv', 'Scripts', 'python.exe'),
+    path.join(basePath, 'python', 'venv', 'bin', 'python'),
+  ];
   
-  // Production: use embedded Python
-  const resourcesPath = process.resourcesPath;
-  const embeddedPython = path.join(resourcesPath, 'python-embedded', 'python.exe');
-  
-  if (fs.existsSync(embeddedPython)) {
-    return embeddedPython;
+  for (const pyPath of pythonPaths) {
+    if (fs.existsSync(pyPath)) {
+      console.log(`✅ Found Python at: ${pyPath}`);
+      return pyPath;
+    }
   }
   
   // Fallback to system Python
-  return 'python';
+  console.log('📌 Using system Python');
+  return process.platform === 'win32' ? 'py' : 'python3';
 }
 
 /**
